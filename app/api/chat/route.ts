@@ -350,17 +350,31 @@ Action: "Perfect! I've updated your age to 30."
 </tool>
 <tool name="webSearchFast">
 <purpose>Search the web for current information, news, facts, or any topic</purpose>
-<usage>webSearchFast({query: "search terms", searchDepth?: "advanced", topic?: "general"})</usage>
+<usage>webSearchFast({query: "search terms", topic?: "general", maxResults?: 5})</usage>
 <when>When user asks about current events, facts, comparisons, or needs up-to-date information</when>
 
 <parameters>
 - query: string (required) - The search query. ALWAYS include the current year (e.g., 2025) for latest/current information
-- searchDepth: "basic" | "advanced" (default: "advanced") - Depth of search
 - topic: "general" | "news" (default: "general") - Type of search
+- maxResults: number (1-5, default: 5) - Number of results to return. Choose based on query specificity
 </parameters>
 
+<result_count_guidance>
+Use maxResults intelligently based on the query:
+- 1-2 results: For very specific queries (e.g., "IRDAI contact number", "current GST rate on insurance")
+- 3 results: For focused queries needing multiple perspectives (e.g., "best term insurance for 30 year old")
+- 4-5 results: For comprehensive research, comparisons, or broad topics (e.g., "compare health insurance plans")
+
+Examples:
+- "What is IRDAI helpline?" → maxResults: 1 (specific fact)
+- "HDFC term insurance premium calculator" → maxResults: 2 (specific tool/page)
+- "Best health insurance for diabetes" → maxResults: 4 (needs comparison)
+- "Compare all term insurance providers" → maxResults: 5 (comprehensive research)
+</result_count_guidance>
+
 <intelligent_features>
-- Automatically returns 5 relevant results
+- Always uses ADVANCED search mode for comprehensive results
+- AI-guided result count (1-5) based on query specificity
 - Smart domain selection: Automatically includes relevant trusted domains based on query context
   * Insurance queries: IRDAI, PolicyBazaar, major insurers, financial news sites
   * Health queries: Medical authorities, hospitals, health information sites
@@ -368,6 +382,27 @@ Action: "Perfect! I've updated your age to 30."
   * Financial queries: SEBI, stock exchanges, financial portals
 - Year emphasis: Always include year in queries for current information
 </intelligent_features>
+
+<search_optimization>
+⚡ CRITICAL: To get the BEST search results, ALWAYS structure your queries to trigger domain filtering:
+- Include specific keywords that match the domain selection logic
+- For insurance: Include words like "insurance", "policy", "premium", "HDFC", "ICICI", "Bajaj", etc.
+- For health: Include words like "health", "medical", "disease", "diabetes", "hypertension"
+- For government: Include words like "IRDAI", "regulation", "government"
+- For finance: Include words like "investment", "mutual fund", "tax"
+
+Examples of GOOD queries (will trigger domain filtering):
+✅ "term life insurance plans India 2025 comparison"
+✅ "IRDAI health insurance regulations 2025"
+✅ "diabetes pre-existing condition health insurance coverage"
+✅ "HDFC life insurance premium calculator 2025"
+
+Examples of POOR queries (won't trigger domain filtering):
+❌ "best plans India 2025"
+❌ "latest rules 2025"
+❌ "coverage for conditions"
+❌ "calculator 2025"
+</search_optimization>
 
 <capabilities>
 - Real-time web search using Tavily advanced search
@@ -392,22 +427,28 @@ Action: "Perfect! I've updated your age to 30."
 
 <examples>
 User: "What are the latest IRDAI regulations for health insurance?"
-Call: webSearchFast({query: "IRDAI health insurance regulations 2025 latest updates", topic: "news"})
+Call: webSearchFast({query: "IRDAI health insurance regulations 2025 latest updates", topic: "news", maxResults: 3})
 
 User: "Compare term life insurance plans from different providers"
-Call: webSearchFast({query: "best term life insurance plans India 2025 comparison"})
+Call: webSearchFast({query: "best term life insurance plans India 2025 comparison PolicyBazaar HDFC ICICI", maxResults: 5})
 
 User: "What's the current market rate for car insurance premiums?"
-Call: webSearchFast({query: "car insurance premium rates India 2025 average cost"})
+Call: webSearchFast({query: "car insurance premium rates India 2025 average cost motor insurance", maxResults: 3})
 
 User: "I'm from Delhi, what is the max term life insurance I can apply for?"
-Call: webSearchFast({query: "maximum term life insurance cover based on ₹15,00,000 annual income in India 2025"})
+Call: webSearchFast({query: "maximum term life insurance cover based on ₹15,00,000 annual income in India 2025 policy premium", maxResults: 4})
 
 User: "Tell me about diabetes coverage in health insurance"
-Call: webSearchFast({query: "diabetes pre-existing condition health insurance coverage India 2025"})
+Call: webSearchFast({query: "diabetes pre-existing condition health insurance coverage India 2025 medical policy", maxResults: 4})
 
 User: "Which insurance companies offer the best claim settlement ratio?"
-Call: webSearchFast({query: "insurance companies best claim settlement ratio India 2025 comparison"})
+Call: webSearchFast({query: "insurance companies best claim settlement ratio India 2025 comparison IRDAI PolicyBazaar", maxResults: 5})
+
+User: "What is IRDAI customer helpline number?"
+Call: webSearchFast({query: "IRDAI customer helpline number contact 2025", maxResults: 1})
+
+User: "HDFC Life premium calculator"
+Call: webSearchFast({query: "HDFC Life insurance premium calculator 2025", maxResults: 2})
 </examples>
 </tool>
 </tools>

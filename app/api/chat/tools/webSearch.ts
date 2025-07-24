@@ -10,29 +10,30 @@ export const webSearchFastSchema = jsonSchema({
       type: 'string',
       description: 'The search query to find information on the web. IMPORTANT: Always include the current year (e.g., 2025) for current/latest information queries'
     },
-    searchDepth: {
-      type: 'string',
-      enum: ['basic', 'advanced'],
-      default: 'advanced',
-      description: 'The depth of search - advanced provides more comprehensive results'
-    },
     topic: {
       type: 'string',
       enum: ['general', 'news'],
       default: 'general',
       description: 'The type of search - general or news'
+    },
+    maxResults: {
+      type: 'number',
+      minimum: 1,
+      maximum: 5,
+      default: 5,
+      description: 'Number of results to return (1-5). Use fewer results for specific queries, more for comprehensive research'
     }
   },
   required: ['query'],
   additionalProperties: false,
-  description: 'Search the web for information using Tavily advanced search'
+  description: 'Search the web for information using Tavily advanced search (always uses advanced mode)'
 });
 
 // Zod schema for validation
 const webSearchFastZodSchema = z.object({
   query: z.string().min(1, 'Search query cannot be empty'),
-  searchDepth: z.enum(['basic', 'advanced']).default('advanced'),
-  topic: z.enum(['general', 'news']).default('general')
+  topic: z.enum(['general', 'news']).default('general'),
+  maxResults: z.number().min(1).max(5).default(5)
 });
 
 // Type for search results
@@ -161,10 +162,10 @@ export const webSearchFastTool = tool({
       // Get relevant domains based on query
       const includeDomains = getIncludeDomains(validatedParams.query);
 
-      // Perform search with advanced mode and fixed 5 results
+      // Perform search with advanced mode and AI-guided number of results
       const response = await tvly.search(validatedParams.query, {
-        search_depth: validatedParams.searchDepth,
-        max_results: 5, // Fixed at 5 results
+        search_depth: 'advanced', // Always use advanced mode
+        max_results: validatedParams.maxResults, // AI-guided 1-5 results
         topic: validatedParams.topic as 'general' | 'news',
         include_answer: true,
         include_raw_content: true,
