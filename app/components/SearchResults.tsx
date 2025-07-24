@@ -40,17 +40,16 @@ export default function SearchResults({ query, results, answer }: SearchResultsP
 
   return (
     <div className="w-full">
-      {/* Header with query */}
+      {/* Header */}
       <div className="mb-4 max-w-3xl mx-auto px-4">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <h3 className="text-sm font-medium text-gray-400">Web Search Results</h3>
+          <h3 className="text-sm font-medium text-gray-400">Information found</h3>
         </div>
-        <p className="text-xs text-gray-500 mb-3">Searching for: "{query}"</p>
       </div>
 
       {/* AI Answer if available */}

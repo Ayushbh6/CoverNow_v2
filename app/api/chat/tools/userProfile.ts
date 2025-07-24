@@ -101,6 +101,7 @@ type UserProfile = {
   hasIssues: boolean | null;
   issues: string[];
   annualIncome: number | null;
+  city: string | null;
 };
 
 // Helper function to calculate age from date of birth
@@ -134,7 +135,7 @@ export const getUserProfileTool = tool({
       // Get user profile with automatic RLS filtering
       const { data: profile, error } = await supabase
         .from('user_profile')
-        .select('first_name, last_name, age, dob, gender, is_married, has_issues, issues, annual_income')
+        .select('first_name, last_name, age, dob, gender, is_married, has_issues, issues, annual_income, city')
         .eq('user_id', user.id)
         .single();
 
@@ -158,7 +159,8 @@ export const getUserProfileTool = tool({
         isMarried: profile.is_married,
         hasIssues: profile.has_issues,
         issues: profile.issues || [],
-        annualIncome: profile.annual_income
+        annualIncome: profile.annual_income,
+        city: profile.city
       };
 
       return { success: true, data: userProfile };
@@ -200,7 +202,7 @@ export const updateUserProfileTool = tool({
       // Get current profile to check existing values
       const { data: currentProfile, error: fetchError } = await supabase
         .from('user_profile')
-        .select('age, dob, gender, is_married, annual_income')
+        .select('age, dob, gender, is_married, annual_income, city')
         .eq('user_id', user.id)
         .single();
         
@@ -265,6 +267,15 @@ export const updateUserProfileTool = tool({
           currentValue: currentProfile.annual_income,
           newValue: validatedParams.annualIncome,
           displayName: 'annual income'
+        });
+      }
+      
+      if (validatedParams.city !== undefined && currentProfile.city !== null) {
+        fieldsNeedingConfirmation.push({
+          field: 'city',
+          currentValue: currentProfile.city,
+          newValue: validatedParams.city,
+          displayName: 'city'
         });
       }
       
@@ -340,6 +351,7 @@ async function performProfileUpdate(validatedParams: any, supabase: any, userId:
   if (validatedParams.gender !== undefined) updateData.gender = validatedParams.gender;
   if (validatedParams.isMarried !== undefined) updateData.is_married = validatedParams.isMarried;
   if (validatedParams.annualIncome !== undefined) updateData.annual_income = validatedParams.annualIncome;
+  if (validatedParams.city !== undefined) updateData.city = validatedParams.city;
   
   // Check if we have any fields to update after processing
   if (Object.keys(updateData).length === 0) {

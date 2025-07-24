@@ -525,24 +525,60 @@ export default function ChatPage() {
                                   <div className="w-4 h-4 bg-blue-500/20 rounded-full flex items-center justify-center">
                                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
                                   </div>
-                                  <span>Searching the web...</span>
+                                  <span>Aria is finding information...</span>
                                 </div>
                               </div>
                             );
                           }
 
-                          // Other tools - show simple status
+                          // Other tools - show friendly status messages that hide after completion
+                          const toolMessages: Record<string, { pending: string; completed: string }> = {
+                            updateUserProfile: {
+                              pending: 'Aria is updating your profile...',
+                              completed: '✓ Profile updated'
+                            },
+                            manageUserIssues: {
+                              pending: 'Aria is updating your health conditions...',
+                              completed: '✓ Health conditions updated'
+                            },
+                            handleConfirmationResponse: {
+                              pending: 'Processing your response...',
+                              completed: '✓ Response processed'
+                            }
+                          };
+
+                          const toolStatusMessages = toolMessages[toolInvocation.toolName] || {
+                            pending: `Processing ${toolInvocation.toolName}...`,
+                            completed: `✓ ${toolInvocation.toolName} completed`
+                          };
+
+                          // Only show tool status if this message is still loading (hide after AI responds)
+                          const isMessageLoading = isLoading && messages[messages.length - 1].id === message.id;
+                          if (!isMessageLoading && 'result' in toolInvocation) {
+                            return null;
+                          }
+
                           return (
                             <div key={toolCallId} className="max-w-3xl mx-auto px-4">
-                              {'result' in toolInvocation ? (
-                                <div className="mt-2 text-xs text-gray-600">
-                                  Tool {toolInvocation.toolName} completed
-                                </div>
-                              ) : (
-                                <div className="mt-2 text-xs text-gray-600">
-                                  Running {toolInvocation.toolName}...
-                                </div>
-                              )}
+                              <div className={`mt-2 flex items-center gap-2 text-sm transition-opacity duration-300 ${
+                                'result' in toolInvocation ? 'text-green-500' : 'text-gray-500'
+                              }`}>
+                                {'result' in toolInvocation ? (
+                                  <>
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    <span>{toolStatusMessages.completed}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="w-4 h-4 bg-gray-600/20 rounded-full flex items-center justify-center">
+                                      <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" />
+                                    </div>
+                                    <span>{toolStatusMessages.pending}</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
