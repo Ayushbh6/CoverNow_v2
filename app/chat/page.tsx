@@ -16,6 +16,7 @@ interface Conversation {
   created_at: string
   updated_at: string
   title?: string | null
+  token_count: number
 }
 
 // Function to clean up garbled emojis
@@ -56,10 +57,23 @@ export default function ChatPage() {
   const [editingTitle, setEditingTitle] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages: setChatMessages } = useChat({
+  const [showTokenLimitModal, setShowTokenLimitModal] = useState(false)
+  
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages: setChatMessages, error } = useChat({
     api: '/api/chat',
+    maxSteps: 15, // Match the server-side maxSteps
     onFinish: () => {
       loadConversations()
+    },
+    onError: (error) => {
+      try {
+        const errorData = JSON.parse(error.message)
+        if (errorData.error === 'Token limit reached') {
+          setShowTokenLimitModal(true)
+        }
+      } catch {
+        console.error('Chat error:', error)
+      }
     },
     initialMessages: [],
   })
@@ -230,6 +244,8 @@ export default function ChatPage() {
   const selectConversation = async (conv: Conversation) => {
     setCurrentConversation(conv)
     await loadMessages(conv.id)
+    // Reset token limit modal when switching conversations
+    setShowTokenLimitModal(false)
   }
 
   const deleteConversation = async (convId: string) => {
@@ -316,7 +332,7 @@ export default function ChatPage() {
                     value={editingTitle}
                     onChange={(e) => setEditingTitle(e.target.value)}
                     onBlur={() => renameConversation(conv.id)}
-                    onKeyPress={(e) => e.key === 'Enter' && renameConversation(conv.id)}
+                    onKeyDown={(e) => e.key === 'Enter' && renameConversation(conv.id)}
                     className="flex-1 bg-gray-700 text-white px-2 py-1 rounded text-sm"
                     autoFocus
                   />
@@ -485,17 +501,19 @@ export default function ChatPage() {
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="How can I help you today?"
+                placeholder={currentConversation?.token_count && currentConversation.token_count >= 120000 
+                  ? "Context limit reached. Start a new chat to continue." 
+                  : "How can I help you today?"}
                 className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none"
-                disabled={isLoading}
+                disabled={isLoading || !!currentConversation?.token_count && currentConversation.token_count >= 120000}
               />
 
               {/* Send button */}
               <button
                 type="submit"
-                disabled={isLoading || !input.trim()}
+                disabled={isLoading || !input.trim() || !!currentConversation?.token_count && currentConversation.token_count >= 120000}
                 className={`p-2 rounded-lg transition-colors ${
-                  input.trim() && !isLoading
+                  input.trim() && !isLoading && (!currentConversation || !currentConversation.token_count || currentConversation.token_count < 120000)
                     ? 'bg-white text-black hover:bg-gray-200'
                     : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                 }`}
@@ -511,6 +529,55 @@ export default function ChatPage() {
           </form>
         </div>
       </div>
+
+      {/* Token Limit Modal */}
+      {showTokenLimitModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#212121] border border-gray-800 rounded-lg p-6 max-w-md w-full">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-white">Context Limit Reached</h3>
+              </div>
+              <button
+                onClick={() => setShowTokenLimitModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <p className="text-gray-300 mb-6">
+              This conversation has reached its context limit. Please start a new chat to continue.
+            </p>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setCurrentConversation(null)
+                  setChatMessages([])
+                  setShowTokenLimitModal(false)
+                }}
+                className="flex-1 bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium"
+              >
+                Start New Chat
+              </button>
+              <button
+                onClick={() => setShowTokenLimitModal(false)}
+                className="flex-1 bg-gray-700 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors font-medium"
+              >
+                Stay Here
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
