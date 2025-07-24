@@ -221,7 +221,6 @@ For questions about the platform:
 ## 📄 License
 
 **CoverNow Insurance Brokers Pvt Ltd**  
-IRDAI License: DB 789/20
 
 ---
 
