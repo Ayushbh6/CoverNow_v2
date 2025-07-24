@@ -8,8 +8,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
-import { Message as AiMessage } from 'ai/react'
+import { Message as AiMessage, ToolInvocation } from 'ai/react'
 import { useChat } from '@ai-sdk/react'
+import SearchResults from '@/app/components/SearchResults'
 
 interface Conversation {
   id: string
@@ -86,31 +87,45 @@ export default function ChatPage() {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
+        // Clear stored conversation on sign out
+        localStorage.removeItem('currentConversationId')
         router.push('/auth')
       } else if (event === 'SIGNED_IN' && session) {
         setUser(session.user)
-        // Create new conversation on sign in
-        setCurrentConversation(null)
-        setChatMessages([])
+        // Only clear conversation if it's a fresh sign in (no stored conversation)
+        const storedConvId = localStorage.getItem('currentConversationId')
+        if (!storedConvId) {
+          setCurrentConversation(null)
+          setChatMessages([])
+        }
       }
     })
 
+    // Clear localStorage on tab close (not on refresh or navigation)
+    const handleBeforeUnload = () => {
+      // This will only run when the tab is actually being closed
+      localStorage.removeItem('currentConversationId')
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
     return () => {
       subscription.unsubscribe()
+      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   }, [])
 
   // Persist current conversation ID
   useEffect(() => {
     if (currentConversation) {
-      sessionStorage.setItem('currentConversationId', currentConversation.id)
+      localStorage.setItem('currentConversationId', currentConversation.id)
     }
   }, [currentConversation])
 
   // Restore conversation on mount
   useEffect(() => {
     if (conversations.length > 0) {
-      const savedConversationId = sessionStorage.getItem('currentConversationId')
+      const savedConversationId = localStorage.getItem('currentConversationId')
       if (savedConversationId) {
         const savedConversation = conversations.find(c => c.id === savedConversationId)
         if (savedConversation) {
@@ -165,7 +180,14 @@ export default function ChatPage() {
         id: msg.id,
         role: msg.role,
         content: cleanEmojis(msg.content),
-        createdAt: new Date(msg.created_at)
+        createdAt: new Date(msg.created_at),
+        // Map tool_calls from database to toolInvocations format
+        toolInvocations: msg.tool_calls ? msg.tool_calls.map((toolCall: any) => ({
+          toolCallId: toolCall.toolCallId,
+          toolName: toolCall.toolName,
+          args: toolCall.args,
+          result: toolCall.result
+        })) : undefined
       }))
       setChatMessages(cleanedMessages)
     }
@@ -254,6 +276,7 @@ export default function ChatPage() {
     if (currentConversation?.id === convId) {
       setCurrentConversation(null)
       setChatMessages([])
+      localStorage.removeItem('currentConversationId')
     }
     setShowDeleteConfirm(null)
   }
@@ -279,6 +302,7 @@ export default function ChatPage() {
   }
 
   const signOut = async () => {
+    localStorage.removeItem('currentConversationId')
     await supabase.auth.signOut()
     router.push('/auth')
   }
@@ -293,6 +317,7 @@ export default function ChatPage() {
             onClick={() => {
               setCurrentConversation(null)
               setChatMessages([])
+              localStorage.removeItem('currentConversationId')
             }}
             className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-gray-800 rounded-lg transition-colors"
           >
@@ -430,49 +455,108 @@ export default function ChatPage() {
               <h2 className="text-3xl font-light mb-2">What's on your mind tonight?</h2>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto py-8 px-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`mb-6 ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
-                >
-                  {message.role === 'assistant' ? (
-                    <div className="flex gap-3">
-                      <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold">AI</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-white prose prose-invert max-w-none
-                          prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700
-                          prose-code:text-orange-400 prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-                          prose-strong:text-orange-400 prose-em:text-orange-300
-                          prose-headings:text-orange-400 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
-                          prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-orange-400
-                          prose-blockquote:border-orange-400 prose-blockquote:text-gray-300
-                          prose-a:text-orange-400 prose-a:underline hover:prose-a:text-orange-300">
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeHighlight]}
-                          >
-                            {cleanEmojis(message.content)}
-                          </ReactMarkdown>
-                        </div>
-                        {isLoading && messages[messages.length - 1].id === message.id && (
-                          <div className="mt-2">
-                            <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse inline-block"></div>
+            <div className="py-8">
+              {messages.map((message) => {
+                // Check if this message has web search results
+                const hasWebSearch = message.role === 'assistant' && 
+                  message.toolInvocations?.some(inv => inv.toolName === 'webSearchFast' && 'result' in inv && inv.result?.success);
+
+                return (
+                  <div
+                    key={message.id}
+                    className={`mb-6 ${!hasWebSearch ? 'max-w-3xl mx-auto px-4' : ''} ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
+                  >
+                    {message.role === 'assistant' ? (
+                      <>
+                        <div className={`flex gap-3 ${hasWebSearch ? 'max-w-3xl mx-auto px-4' : ''}`}>
+                          <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold">AI</span>
                           </div>
-                        )}
+                          <div className="flex-1">
+                            <div className="text-white prose prose-invert max-w-none
+                              prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700
+                              prose-code:text-orange-400 prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                              prose-strong:text-orange-400 prose-em:text-orange-300
+                              prose-headings:text-orange-400 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
+                              prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-orange-400
+                              prose-blockquote:border-orange-400 prose-blockquote:text-gray-300
+                              prose-a:text-orange-400 prose-a:underline hover:prose-a:text-orange-300">
+                              <ReactMarkdown 
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeHighlight]}
+                              >
+                                {cleanEmojis(message.content)}
+                              </ReactMarkdown>
+                            </div>
+                            {isLoading && messages[messages.length - 1].id === message.id && (
+                              <div className="mt-2">
+                                <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse inline-block"></div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {/* Render tool invocations outside of the max-width container for web search */}
+                        {message.toolInvocations?.map((toolInvocation: ToolInvocation) => {
+                          const toolCallId = toolInvocation.toolCallId;
+
+                          // Render web search results
+                          if (toolInvocation.toolName === 'webSearchFast') {
+                            return 'result' in toolInvocation ? (
+                              toolInvocation.result?.success ? (
+                                <div key={toolCallId} className="mt-4">
+                                  <SearchResults
+                                    query={toolInvocation.result.query}
+                                    results={toolInvocation.result.results}
+                                    answer={toolInvocation.result.answer}
+                                  />
+                                </div>
+                              ) : (
+                                <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                    <p className="text-sm text-red-400">
+                                      Search failed: {toolInvocation.result?.error || 'Unknown error'}
+                                    </p>
+                                  </div>
+                                </div>
+                              )
+                            ) : (
+                              <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <div className="w-4 h-4 bg-blue-500/20 rounded-full flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                                  </div>
+                                  <span>Searching the web...</span>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // Other tools - show simple status
+                          return (
+                            <div key={toolCallId} className="max-w-3xl mx-auto px-4">
+                              {'result' in toolInvocation ? (
+                                <div className="mt-2 text-xs text-gray-600">
+                                  Tool {toolInvocation.toolName} completed
+                                </div>
+                              ) : (
+                                <div className="mt-2 text-xs text-gray-600">
+                                  Running {toolInvocation.toolName}...
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <div className="max-w-[70%]">
+                        <div className="bg-gray-700 text-white px-4 py-2 rounded-2xl">
+                          {message.content}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="max-w-[70%]">
-                      <div className="bg-gray-700 text-white px-4 py-2 rounded-2xl">
-                        {message.content}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -501,19 +585,19 @@ export default function ChatPage() {
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder={currentConversation?.token_count && currentConversation.token_count >= 120000 
+                placeholder={currentConversation?.token_count && currentConversation.token_count >= 200000 
                   ? "Context limit reached. Start a new chat to continue." 
                   : "How can I help you today?"}
                 className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none"
-                disabled={isLoading || !!currentConversation?.token_count && currentConversation.token_count >= 120000}
+                disabled={isLoading || !!currentConversation?.token_count && currentConversation.token_count >= 200000}
               />
 
               {/* Send button */}
               <button
                 type="submit"
-                disabled={isLoading || !input.trim() || !!currentConversation?.token_count && currentConversation.token_count >= 120000}
+                disabled={isLoading || !input.trim() || !!currentConversation?.token_count && currentConversation.token_count >= 200000}
                 className={`p-2 rounded-lg transition-colors ${
-                  input.trim() && !isLoading && (!currentConversation || !currentConversation.token_count || currentConversation.token_count < 120000)
+                                      input.trim() && !isLoading && (!currentConversation || !currentConversation.token_count || currentConversation.token_count < 200000)
                     ? 'bg-white text-black hover:bg-gray-200'
                     : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                 }`}
@@ -563,6 +647,7 @@ export default function ChatPage() {
                   setCurrentConversation(null)
                   setChatMessages([])
                   setShowTokenLimitModal(false)
+                  localStorage.removeItem('currentConversationId')
                 }}
                 className="flex-1 bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium"
               >

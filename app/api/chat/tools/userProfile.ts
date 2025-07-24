@@ -37,6 +37,10 @@ export const updateUserProfileSchema = jsonSchema({
       type: 'number',
       minimum: 0,
       description: "User's annual income in their local currency (e.g., Rupees). Do not include currency symbols or commas."
+    },
+    city: {
+      type: 'string',
+      description: "User's city of residence"
     }
   },
   required: [],
@@ -69,7 +73,8 @@ const updateUserProfileZodSchema = z.object({
   dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date of birth must be in YYYY-MM-DD format.").optional(),
   gender: z.string().optional(),
   isMarried: z.boolean().optional(),
-  annualIncome: z.number().min(0).optional()
+  annualIncome: z.number().min(0).optional(),
+  city: z.string().optional()
 });
 
 const manageUserIssuesZodSchema = z.object({
