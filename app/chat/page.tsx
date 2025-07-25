@@ -629,7 +629,11 @@ export default function ChatPage() {
                 {/* Smooth round orb */}
                 <div className="w-full h-full bg-gradient-to-br from-orange-400 to-pink-500 rounded-full animate-pulse"></div>
               </div>
-              <h2 className="text-3xl font-light mb-2">What's on your mind tonight?</h2>
+              <h2 className="text-3xl font-light mb-2">
+                {user?.user_metadata?.first_name 
+                  ? `Hi ${user.user_metadata.first_name}! Say Hi to Aria` 
+                  : "Hi! Say Hi to Aria"}
+              </h2>
             </div>
           ) : (
             <div className="py-8">
