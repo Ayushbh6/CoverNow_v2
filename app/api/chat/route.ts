@@ -14,6 +14,8 @@ import {
   deepResearchLevel2Tool,
   deepResearchSynthesizeTool
 } from './tools/deepResearch';
+import { collectLifeInsuranceInfoTool } from './tools/collectLifeInsuranceInfo';
+import { showLifeInsuranceRecommendationsTool } from './tools/showLifeInsuranceRecommendations';
 
 function getErrorMessage(error: unknown): string {
   if (error == null) {
@@ -39,11 +41,13 @@ export async function POST(req: NextRequest) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const { messages, conversationId } = await req.json();
+    const { messages, conversationId, formData } = await req.json();
 
     if (!messages || !Array.isArray(messages) || !conversationId) {
       return new Response('Invalid request body', { status: 400 });
     }
+
+
 
     // Fetch user profile data to inject into system prompt
     const { data: userProfile, error: profileError } = await supabase
@@ -75,6 +79,7 @@ export async function POST(req: NextRequest) {
       
       if (!rollingModeAcknowledged) {
         // First time hitting limit - return warning (not error)
+        // Important: This interrupts the normal flow, so no streaming happens here
         return new Response(JSON.stringify({ 
           warning: 'token_limit_approaching',
           message: 'You\'ve reached the conversation limit. For best results, start a new chat. You can also continue here (quality might suffer).',
@@ -559,6 +564,71 @@ deepResearchSynthesize({sessionId: "abc-123"})
 4. NEVER mention the 4-step process to users - just say "deep research"
 </user_communication>
 </tool_group>
+
+<tool name="bookLifeInsurance">
+<purpose>Generate life insurance quotes by collecting user information and providing personalized recommendations</purpose>
+<usage>bookLifeInsurance()</usage>
+<when>When user asks about life insurance, wants insurance quotes, or mentions buying/getting life insurance</when>
+
+<automatic_behavior>
+⚡ This tool automatically:
+1. Fetches the user's profile from the database
+2. Identifies missing fields needed for insurance quotes
+3. Shows a form ONLY for missing information
+4. Generates 5 personalized insurance recommendations
+</automatic_behavior>
+
+<flow>
+1. User asks about life insurance → Call bookLifeInsurance()
+2. Tool checks user profile automatically
+3. If missing required fields (smoking_status, occupation) → Shows form
+4. If all required fields present → Shows recommendations immediately
+5. More optional fields = More accurate quotes
+</flow>
+
+<key_features>
+- Automatically uses existing profile data
+- NEVER asks for first_name or last_name (fixed from DB)
+- Only shows fields that are null/empty
+- Minimal requirements: smoking_status + occupation
+- Progressive enhancement: more data = better quotes
+- Beautiful card-based recommendations UI
+</key_features>
+
+<examples>
+User: "I want to buy life insurance"
+Action: bookLifeInsurance()
+Result: Shows form if needed, or recommendations if ready
+
+User: "Show me term life insurance options"
+Action: bookLifeInsurance()
+Result: Generates quotes based on available data
+
+User: "What life insurance coverage do I need?"
+Action: bookLifeInsurance()
+Result: Collects necessary info and provides recommendations
+</examples>
+
+<important>
+- NEVER manually collect insurance information - always use this tool
+- The tool handles all data collection automatically
+- Don't ask users for information - let the tool's form do it
+- If user has questions about the recommendations, explain them
+</important>
+
+<response_guidelines>
+When the tool shows a form (status: 'needs_input'):
+- Keep your response SHORT and concise (1-2 sentences max)
+- Example: "I'll help you get life insurance quotes. Please fill in the required information below."
+- Do NOT explain each field - the form has help text already
+- Do NOT list what information you need - the form shows it
+
+When the tool shows recommendations (status: 'ready'):
+- Introduce the recommendations briefly
+- Let the recommendation cards speak for themselves
+- Only provide detailed explanations if user asks specific questions
+</response_guidelines>
+</tool>
 </tools>
 
 <conversation_flow>
@@ -751,7 +821,9 @@ Track internally (not visible to users):
         deepResearchInit: deepResearchInitTool,
         deepResearchLevel1: deepResearchLevel1Tool,
         deepResearchLevel2: deepResearchLevel2Tool,
-        deepResearchSynthesize: deepResearchSynthesizeTool
+        deepResearchSynthesize: deepResearchSynthesizeTool,
+        collectLifeInsuranceInfo: collectLifeInsuranceInfoTool,
+        showLifeInsuranceRecommendations: showLifeInsuranceRecommendationsTool
       },
       toolChoice: 'auto', // Let the LLM decide based on system prompt
       maxSteps: 15, // Allow multiple sequential tool calls

@@ -9,8 +9,11 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
 import { Message as AiMessage, useChat } from '@ai-sdk/react'
+import { ToolInvocation } from 'ai'
 import SearchResults from '@/app/components/SearchResults'
 import DeepResearchProgress from '@/app/components/DeepResearchProgress'
+import LifeInsuranceForm from '@/app/components/LifeInsuranceForm'
+import LifeInsuranceRecommendations from '@/app/components/LifeInsuranceRecommendations'
 
 interface Conversation {
   id: string
@@ -61,12 +64,15 @@ export default function ChatPage() {
   const [showTokenLimitModal, setShowTokenLimitModal] = useState(false)
   const [rollingModeAcknowledged, setRollingModeAcknowledged] = useState(false)
   
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages: setChatMessages, error } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages: setChatMessages, error, append } = useChat({
     api: '/api/chat',
     maxSteps: 15, // Match the server-side maxSteps
     headers: rollingModeAcknowledged ? {
       'x-rolling-mode-acknowledged': 'true'
     } : undefined,
+    body: {
+      conversationId: currentConversation?.id
+    },
     onFinish: () => {
       loadConversations()
     },
@@ -83,13 +89,17 @@ export default function ChatPage() {
     onResponse: async (response) => {
       // Check for token limit warning
       if (response.status === 200) {
-        try {
-          const data = await response.clone().json()
-          if (data.warning === 'token_limit_approaching') {
-            setShowTokenLimitModal(true)
+        // Don't try to parse streaming responses
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const data = await response.clone().json()
+            if (data.warning === 'token_limit_approaching') {
+              setShowTokenLimitModal(true)
+            }
+          } catch {
+            // Not a JSON response, continue normally
           }
-        } catch {
-          // Not a JSON response, continue normally
         }
       }
     },
@@ -264,11 +274,25 @@ export default function ChatPage() {
 
       if (msgError) throw msgError
 
-      handleSubmit(e, {
-        body: {
-          conversationId: conversationId
-        }
-      })
+      // Check if we have form data to include
+      const formData = (window as any).__tempFormData;
+      if (formData) {
+        // Clear the temp data
+        delete (window as any).__tempFormData;
+        
+        handleSubmit(e, {
+          body: {
+            conversationId: conversationId,
+            formData: formData
+          }
+        })
+      } else {
+        handleSubmit(e, {
+          body: {
+            conversationId: conversationId
+          }
+        })
+      }
     } catch (error: any) {
       console.error('Error sending message:', error)
     }
@@ -502,23 +526,31 @@ export default function ChatPage() {
                     inv.toolName === 'deepResearchLevel2' || 
                     inv.toolName === 'deepResearchSynthesize'
                   );
+                  
+                // Check if this message has life insurance recommendations
+                const hasLifeInsuranceRecommendations = message.role === 'assistant' &&
+                  message.toolInvocations?.some(inv => 
+                    inv.toolName === 'showLifeInsuranceRecommendations' && 
+                    'result' in inv && 
+                    inv.result?.status === 'ready'
+                  );
 
                 return (
                   <div
                     key={message.id}
-                    className={`mb-6 ${!hasWebSearch ? 'max-w-3xl mx-auto px-4' : ''} ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
+                    className={`mb-6 ${!hasWebSearch && !hasLifeInsuranceRecommendations ? 'max-w-3xl mx-auto px-4' : ''} ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
                   >
                     {message.role === 'assistant' ? (
                       <>
-                        <div className={`flex gap-3 ${hasWebSearch ? 'max-w-3xl mx-auto px-4' : ''}`}>
+                        <div className={`flex gap-3 ${hasWebSearch || hasLifeInsuranceRecommendations ? 'max-w-3xl mx-auto px-4' : ''}`}>
                           <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-xs font-bold">AI</span>
                           </div>
                           <div className="flex-1">
-                            {/* Only render message content if it's NOT showing deep research final results */}
+                            {/* Only render message content if it's NOT showing deep research final results or life insurance recommendations */}
                             {!(hasDeepResearch && message.toolInvocations?.some(inv => 
                               inv.toolName === 'deepResearchSynthesize' && 'result' in inv && inv.result?.success
-                            )) && message.content && (
+                            )) && !hasLifeInsuranceRecommendations && message.content && (
                               <div className="text-white prose prose-invert max-w-none
                                 prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700
                                 prose-code:text-orange-400 prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
@@ -543,7 +575,7 @@ export default function ChatPage() {
                           </div>
                         </div>
                         {/* Render tool invocations outside of the max-width container for web search */}
-                        {message.toolInvocations?.map((toolInvocation: any) => {
+                        {message.toolInvocations?.map((toolInvocation: ToolInvocation) => {
                           const toolCallId = toolInvocation.toolCallId;
 
                           // Render web search results
@@ -611,8 +643,8 @@ export default function ChatPage() {
                                 <DeepResearchProgress 
                                   query={toolInvocation.args?.query || 'Initializing research...'}
                                   phase="reconnaissance"
-                                  progressData={'result' in toolInvocation && toolInvocation.result?.progress ? 
-                                    { insights: toolInvocation.result.progress.insights, totalSearches: toolInvocation.result.progress.totalSearches } : 
+                                  progressData={'result' in toolInvocation && (toolInvocation.result as any).progress ? 
+                                    { insights: (toolInvocation.result as any).progress.insights, totalSearches: (toolInvocation.result as any).progress.totalSearches } : 
                                     undefined}
                                 />
                               </div>
@@ -635,8 +667,8 @@ export default function ChatPage() {
                                 <DeepResearchProgress 
                                   query={message.toolInvocations?.find(inv => inv.toolName === 'deepResearchInit')?.args?.query || 'Researching...'}
                                   phase={toolInvocation.toolName === 'deepResearchLevel1' ? 'level1' : 'level2'}
-                                  progressData={'result' in toolInvocation && toolInvocation.result?.progress ? 
-                                    { insights: toolInvocation.result.progress.insights, totalSearches: toolInvocation.result.progress.totalSearches } : 
+                                  progressData={'result' in toolInvocation && (toolInvocation.result as any).progress ? 
+                                    { insights: (toolInvocation.result as any).progress.insights, totalSearches: (toolInvocation.result as any).progress.totalSearches } : 
                                     undefined}
                                 />
                               </div>
@@ -734,10 +766,106 @@ export default function ChatPage() {
                                 <DeepResearchProgress 
                                   query={message.toolInvocations?.find(inv => inv.toolName === 'deepResearchInit')?.args?.query || 'Synthesizing research...'}
                                   phase="synthesis"
-                                  progressData={'result' in toolInvocation && toolInvocation.result?.progress ? 
-                                    { insights: toolInvocation.result.progress.insights, totalSearches: toolInvocation.result.progress.totalSearches } : 
+                                  progressData={'result' in toolInvocation && (toolInvocation.result as any).progress ? 
+                                    { insights: (toolInvocation.result as any).progress.insights, totalSearches: (toolInvocation.result as any).progress.totalSearches } : 
                                     undefined}
                                 />
+                              </div>
+                            );
+                          }
+
+                          // Handle collectLifeInsuranceInfo tool
+                          if (toolInvocation.toolName === 'collectLifeInsuranceInfo') {
+                            return 'result' in toolInvocation ? (
+                              toolInvocation.result?.status === 'needs_input' ? (
+                                <div key={toolCallId} className="mt-4">
+                                  <LifeInsuranceForm
+                                    userData={toolInvocation.result.userData}
+                                    fieldsToShow={toolInvocation.result.fieldsToShow || []}
+                                    sessionId={toolInvocation.result.sessionId || ''}
+                                    onSubmit={async (data) => {
+                                      console.log('[LifeInsurance] Form submission with data:', data);
+                                      
+                                      // Save the data to the database
+                                      const supabase = createClient();
+                                      const { data: { user } } = await supabase.auth.getUser();
+                                      
+                                      if (user) {
+                                        // Update user profile with the form data
+                                        const { error } = await supabase
+                                          .from('user_profile')
+                                          .update({
+                                            ...data.formData,
+                                            updated_at: new Date().toISOString()
+                                          })
+                                          .eq('user_id', user.id);
+                                          
+                                        if (!error) {
+                                          // Tell the AI to show recommendations
+                                          append({
+                                            role: 'user',
+                                            content: "I've submitted my life insurance information. Please show me personalized recommendations."
+                                          });
+                                        } else {
+                                          console.error('Error updating profile:', error);
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              ) : toolInvocation.result?.status === 'ready' ? (
+                                <div key={toolCallId} className="mt-4">
+                                  <LifeInsuranceRecommendations
+                                    recommendations={toolInvocation.result.recommendations || []}
+                                    userData={toolInvocation.result.userData}
+                                  />
+                                </div>
+                              ) : (
+                                <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                    <p className="text-sm text-red-400">
+                                      Failed to process insurance request: {toolInvocation.result?.error || 'Unknown error'}
+                                    </p>
+                                  </div>
+                                </div>
+                              )
+                            ) : (
+                              <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <div className="w-4 h-4 bg-orange-500/20 rounded-full flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                                  </div>
+                                  <span>Aria is preparing insurance quotes...</span>
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          // Handle showLifeInsuranceRecommendations tool  
+                          if (toolInvocation.toolName === 'showLifeInsuranceRecommendations') {
+                            return 'result' in toolInvocation ? (
+                              toolInvocation.result?.status === 'ready' ? (
+                                <div key={toolCallId} className="mt-4">
+                                  <LifeInsuranceRecommendations
+                                    recommendations={toolInvocation.result.recommendations || []}
+                                    userData={toolInvocation.result.userData}
+                                  />
+                                </div>
+                              ) : toolInvocation.result?.status === 'incomplete_profile' ? (
+                                <div key={toolCallId} className="mt-2 text-sm text-orange-400">
+                                  {toolInvocation.result.error}
+                                </div>
+                              ) : (
+                                <div key={toolCallId} className="mt-2 text-sm text-red-400">
+                                  Error: {toolInvocation.result?.error || 'Unknown error'}
+                                </div>
+                              )
+                            ) : (
+                              <div key={toolCallId} className="mt-2 text-sm text-gray-500">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                  Aria is generating your personalized recommendations...
+                                </div>
                               </div>
                             );
                           }
@@ -771,6 +899,14 @@ export default function ChatPage() {
                             deepResearchSynthesize: {
                               pending: 'Aria is generating comprehensive report...',
                               completed: '✓ Deep research completed'
+                            },
+                            collectLifeInsuranceInfo: {
+                              pending: 'Aria is preparing your insurance form...',
+                              completed: '✓ Insurance form ready'
+                            },
+                            showLifeInsuranceRecommendations: {
+                              pending: 'Aria is analyzing your insurance needs...',
+                              completed: '✓ Insurance recommendations ready'
                             }
                           };
 
