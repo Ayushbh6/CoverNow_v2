@@ -56,9 +56,9 @@ function generateFormFields(userData: UserProfileData): FormFieldDefinition[] {
     fields.push({
       fieldName: 'dob',
       fieldType: 'date',
-      required: false,
+      required: true, // Changed from false to true - Required for premium calculation
       currentValue: null,
-      helpText: 'Your date of birth helps us calculate accurate premiums',
+      helpText: 'Required for accurate premium calculation - premiums increase with age',
       placeholder: 'YYYY-MM-DD'
     });
   }
@@ -83,9 +83,9 @@ function generateFormFields(userData: UserProfileData): FormFieldDefinition[] {
     fields.push({
       fieldName: 'annual_income',
       fieldType: 'number',
-      required: false,
+      required: true, // Changed from false to true - Required for coverage calculation
       currentValue: null,
-      helpText: 'Helps determine appropriate coverage amount',
+      helpText: 'Required to calculate appropriate coverage amount (10-15x income) and affordable premiums',
       placeholder: 'e.g., 1000000'
     });
   }
@@ -156,23 +156,23 @@ function generateFormFields(userData: UserProfileData): FormFieldDefinition[] {
     });
   }
 
-  // Coverage amount - OPTIONAL
+  // Coverage amount - OPTIONAL (smart default will be calculated)
   fields.push({
     fieldName: 'coverage_amount',
     fieldType: 'number',
     required: false,
     currentValue: userData.coverage_amount || null,
-    helpText: 'Recommended: 10-15 times your annual income',
+    helpText: 'Optional: We\'ll suggest 12x your annual income if not specified',
     placeholder: 'e.g., 5000000'
   });
 
-  // Policy term - OPTIONAL
+  // Policy term - OPTIONAL (smart default will be calculated)
   fields.push({
     fieldName: 'policy_term',
     fieldType: 'select',
     required: false,
     currentValue: userData.policy_term || null,
-    helpText: 'Choose how long you want coverage',
+    helpText: 'Optional: We\'ll suggest an age-appropriate term if not specified',
     options: [
       { value: '', label: 'Select policy term' },
       { value: '5', label: '5 years' },

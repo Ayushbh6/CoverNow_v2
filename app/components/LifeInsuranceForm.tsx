@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FormFieldDefinition, UserProfileData } from '@/app/api/chat/tools/bookLifeInsurance'
+import { FormFieldDefinition, UserProfileData } from '@/app/api/chat/tools/collectLifeInsuranceInfo'
 
 interface LifeInsuranceFormProps {
   userData: UserProfileData & {
@@ -56,7 +56,7 @@ export default function LifeInsuranceForm({
 
   // Handle field change
   const handleFieldChange = (fieldName: string, value: any, required: boolean) => {
-    setFormData(prev => ({ ...prev, [fieldName]: value }))
+    setFormData((prev: any) => ({ ...prev, [fieldName]: value }))
     
     // Validate on change for required fields
     if (required) {
@@ -109,7 +109,7 @@ export default function LifeInsuranceForm({
   // Handle removing health issues
   const handleRemoveHealthIssue = (index: number) => {
     const currentIssues = formData.issues || []
-    const newIssues = currentIssues.filter((_, i) => i !== index)
+    const newIssues = currentIssues.filter((_: any, i: number) => i !== index)
     handleFieldChange('issues', newIssues, false)
   }
 
@@ -124,6 +124,8 @@ export default function LifeInsuranceForm({
 
   // Render field based on type
   const renderField = (field: FormFieldDefinition) => {
+    const baseInputClasses = "w-full px-4 py-3.5 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl text-white placeholder-white/40 focus:outline-none focus:border-white/30 focus:bg-white/10 transition-all duration-300 font-medium tracking-wide shadow-inner"
+    
     switch (field.fieldType) {
       case 'text':
         return (
@@ -132,7 +134,7 @@ export default function LifeInsuranceForm({
             value={formData[field.fieldName] || ''}
             onChange={(e) => handleFieldChange(field.fieldName, e.target.value, field.required)}
             placeholder={field.placeholder}
-            className="w-full px-3 py-2 bg-[#2a2a2a] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-400"
+            className={baseInputClasses}
           />
         )
 
@@ -140,15 +142,15 @@ export default function LifeInsuranceForm({
         return (
           <div className="relative">
             {field.fieldName.includes('amount') || field.fieldName.includes('income') ? (
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/60 font-medium">₹</span>
             ) : null}
             <input
               type="number"
               value={formData[field.fieldName] || ''}
               onChange={(e) => handleFieldChange(field.fieldName, e.target.value ? Number(e.target.value) : null, field.required)}
               placeholder={field.placeholder}
-              className={`w-full px-3 py-2 bg-[#2a2a2a] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-400 ${
-                field.fieldName.includes('amount') || field.fieldName.includes('income') ? 'pl-8' : ''
+              className={`${baseInputClasses} ${
+                field.fieldName.includes('amount') || field.fieldName.includes('income') ? 'pl-10' : ''
               }`}
             />
           </div>
@@ -161,7 +163,7 @@ export default function LifeInsuranceForm({
             value={formData[field.fieldName] || ''}
             onChange={(e) => handleFieldChange(field.fieldName, e.target.value, field.required)}
             max={new Date().toISOString().split('T')[0]}
-            className="w-full px-3 py-2 bg-[#2a2a2a] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-400"
+            className={baseInputClasses}
           />
         )
 
@@ -173,10 +175,10 @@ export default function LifeInsuranceForm({
                 key={option.value}
                 type="button"
                 onClick={() => handleFieldChange(field.fieldName, option.value, field.required)}
-                className={`flex-1 px-4 py-2 rounded-lg border transition-colors ${
+                className={`flex-1 px-4 py-3.5 rounded-2xl border font-medium tracking-wide transition-all duration-300 ${
                   formData[field.fieldName] === option.value
-                    ? 'bg-orange-500 border-orange-500 text-white'
-                    : 'bg-[#2a2a2a] border-gray-700 text-gray-300 hover:border-gray-600'
+                    ? 'bg-gradient-to-r from-orange-500 to-red-500 border-orange-500/50 text-white shadow-lg transform scale-[1.02]'
+                    : 'bg-white/5 border-white/10 text-white/80 hover:border-white/20 hover:bg-white/10'
                 }`}
               >
                 {option.label}
@@ -190,10 +192,10 @@ export default function LifeInsuranceForm({
           <select
             value={formData[field.fieldName] || ''}
             onChange={(e) => handleFieldChange(field.fieldName, e.target.value, field.required)}
-            className="w-full px-3 py-2 bg-[#2a2a2a] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-400"
+            className={`${baseInputClasses} cursor-pointer`}
           >
             {field.options?.map((option: any) => (
-              <option key={option.value} value={option.value}>
+              <option key={option.value} value={option.value} className="bg-slate-800 text-white">
                 {option.label}
               </option>
             ))}
@@ -284,41 +286,69 @@ export default function LifeInsuranceForm({
   )
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto px-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 p-6 rounded-xl border border-gray-800 mb-6">
-        <h3 className="text-lg font-semibold text-gray-300 mb-2">Getting Life Insurance Quotes for:</h3>
-        <p className="text-2xl font-bold text-white">{userData.first_name} {userData.last_name}</p>
+      <div className="relative bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl p-8 rounded-3xl border border-white/10 mb-8 shadow-2xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-indigo-600/10 rounded-3xl"></div>
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.031 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-white/90 tracking-tight">Life Insurance Consultation</h3>
+              <p className="text-sm text-white/60">Personalized coverage for your future</p>
+            </div>
+          </div>
+
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-8">
         {/* Required Fields Section */}
         {requiredFields.length > 0 && (
-          <div className="bg-[#2a2a2a] rounded-xl border border-gray-800 p-6">
-            <h4 className="text-lg font-semibold text-orange-400 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              Required Information
-            </h4>
-            <div className="space-y-4">
-              {requiredFields.map(field => (
-                <div key={field.fieldName}>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    {field.fieldName.split('_').map(word => 
-                      word.charAt(0).toUpperCase() + word.slice(1)
-                    ).join(' ')}
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  {renderField(field)}
-                  {field.helpText && !errors[field.fieldName] && (
-                    <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>
-                  )}
-                  {errors[field.fieldName] && (
-                    <p className="text-xs text-red-400 mt-1">{errors[field.fieldName]}</p>
-                  )}
+          <div className="relative bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl rounded-3xl border border-white/10 p-8 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 via-red-500/5 to-pink-500/5 rounded-3xl"></div>
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
-              ))}
+                <div>
+                  <h4 className="text-lg font-semibold text-white tracking-tight">Essential Information</h4>
+                  <p className="text-sm text-white/60">Four key details for accurate premium calculation</p>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                {requiredFields.map(field => (
+                  <div key={field.fieldName} className="space-y-3">
+                    <label className="block text-sm font-medium text-white/80 tracking-wide">
+                      {field.fieldName.split('_').map(word => 
+                        word.charAt(0).toUpperCase() + word.slice(1)
+                      ).join(' ')}
+                      <span className="text-orange-400 ml-1.5">•</span>
+                    </label>
+                    <div className="relative group">
+                      {renderField(field)}
+                      {errors[field.fieldName] && (
+                        <div className="absolute -bottom-6 left-0 flex items-center gap-1">
+                          <svg className="w-3 h-3 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" />
+                          </svg>
+                          <p className="text-xs text-red-400 font-medium">{errors[field.fieldName]}</p>
+                        </div>
+                      )}
+                    </div>
+                    {field.helpText && !errors[field.fieldName] && (
+                      <p className="text-xs text-white/50 leading-relaxed">{field.helpText}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -355,9 +385,21 @@ export default function LifeInsuranceForm({
         {coverageFields.length > 0 && (
           <div className="bg-[#2a2a2a] rounded-xl border border-gray-800 p-6">
             <h4 className="text-lg font-semibold text-gray-300 mb-2">Coverage Preferences</h4>
-            <p className="text-sm text-gray-500 mb-4">
-              Help us recommend the right coverage (optional)
+            <p className="text-sm text-gray-500 mb-3">
+              Optional: We'll use smart defaults if you don't specify these
             </p>
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-xs text-blue-300">
+                  <p className="font-medium mb-1">Smart Defaults:</p>
+                  <p>• Coverage: 12x your annual income (industry standard)</p>
+                  <p>• Term: Age-appropriate duration for retirement planning</p>
+                </div>
+              </div>
+            </div>
             <div className="space-y-4">
               {coverageFields.map(field => (
                 <div key={field.fieldName}>
@@ -378,23 +420,41 @@ export default function LifeInsuranceForm({
         )}
 
         {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={!canProceed()}
-          className={`w-full py-3 rounded-lg font-semibold transition-colors ${
-            canProceed()
-              ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
-              : 'bg-gray-700 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          {canProceed() ? 'Get Insurance Quotes' : 'Please fill required fields'}
-        </button>
-
-        {canProceed() && (
-          <p className="text-xs text-gray-500 text-center">
-            Fill more fields above for more accurate quotes
-          </p>
-        )}
+        <div className="relative">
+          <button
+            type="submit"
+            disabled={!canProceed()}
+            className={`w-full py-4 rounded-2xl font-semibold tracking-wide transition-all duration-300 shadow-lg ${
+              canProceed()
+                ? 'bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white transform hover:scale-[1.02] hover:shadow-xl'
+                : 'bg-white/5 border border-white/10 text-white/40 cursor-not-allowed'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              {canProceed() ? (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Get Premium Quotes
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  Complete Required Fields
+                </>
+              )}
+            </div>
+          </button>
+          
+          {canProceed() && (
+            <p className="text-xs text-white/50 text-center mt-4 font-medium">
+              Enhanced accuracy with optional details above
+            </p>
+          )}
+        </div>
       </form>
     </div>
   )

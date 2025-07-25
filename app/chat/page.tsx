@@ -51,7 +51,13 @@ function cleanEmojis(text: string): string {
 export default function ChatPage() {
   const router = useRouter()
   const supabase = createClient()
+  
+  // Chat scrolling refs and state
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [isUserScrolling, setIsUserScrolling] = useState(false)
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
+  const lastScrollTop = useRef(0)
   
   const [user, setUser] = useState<User | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -115,12 +121,12 @@ export default function ChatPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         // Clear stored conversation on sign out
-        localStorage.removeItem('currentConversationId')
+        sessionStorage.removeItem('currentConversationId')
         router.push('/auth')
       } else if (event === 'SIGNED_IN' && session) {
         setUser(session.user)
         // Only clear conversation if it's a fresh sign in (no stored conversation)
-        const storedConvId = localStorage.getItem('currentConversationId')
+        const storedConvId = sessionStorage.getItem('currentConversationId')
         if (!storedConvId) {
           setCurrentConversation(null)
           setChatMessages([])
@@ -128,35 +134,29 @@ export default function ChatPage() {
       }
     })
 
-    // Clear localStorage on tab close (not on refresh or navigation)
-    const handleBeforeUnload = () => {
-      // This will only run when the tab is actually being closed
-      localStorage.removeItem('currentConversationId')
-    }
-    
-    window.addEventListener('beforeunload', handleBeforeUnload)
-
     return () => {
       subscription.unsubscribe()
-      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   }, [])
 
   // Persist current conversation ID
   useEffect(() => {
     if (currentConversation) {
-      localStorage.setItem('currentConversationId', currentConversation.id)
+      sessionStorage.setItem('currentConversationId', currentConversation.id)
     }
   }, [currentConversation])
 
   // Restore conversation on mount
   useEffect(() => {
     if (conversations.length > 0) {
-      const savedConversationId = localStorage.getItem('currentConversationId')
+      const savedConversationId = sessionStorage.getItem('currentConversationId')
       if (savedConversationId) {
         const savedConversation = conversations.find(c => c.id === savedConversationId)
         if (savedConversation) {
           selectConversation(savedConversation)
+        } else {
+          // If the saved conversation no longer exists, clear it
+          sessionStorage.removeItem('currentConversationId')
         }
       }
     }
@@ -224,12 +224,77 @@ export default function ChatPage() {
     }
   }
 
+  // Simple and direct scroll management
+  const scrollToUserMessage = () => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    // Find the last user message element
+    const messageElements = container.querySelectorAll('[data-message-role="user"]')
+    const lastUserMessageElement = messageElements[messageElements.length - 1]
+    
+    if (lastUserMessageElement) {
+      // Position the user message at the very top with minimal padding
+      // This ensures maximum space below for AI streaming
+      const containerRect = container.getBoundingClientRect()
+      const messageRect = lastUserMessageElement.getBoundingClientRect()
+      const targetScrollTop = container.scrollTop + messageRect.top - containerRect.top - 60 // Less padding for more space
+      
+      container.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      })
+    }
+  }
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const isNearBottom = () => {
+    const container = messagesContainerRef.current
+    if (!container) return true
+    
+    const threshold = 150 // pixels from bottom
+    const { scrollTop, scrollHeight, clientHeight } = container
+    return scrollHeight - scrollTop - clientHeight < threshold
+  }
+
+  const handleScroll = () => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const currentScrollTop = container.scrollTop
+    const nearBottom = isNearBottom()
+
+    // Simple scroll state management
+    setIsUserScrolling(!nearBottom)
+    setShouldAutoScroll(nearBottom)
+
+    lastScrollTop.current = currentScrollTop
+  }
+
+  // Direct scroll management for messages
   useEffect(() => {
-    scrollToBottom()
+    if (messages.length === 0) return
+
+    const lastMessage = messages[messages.length - 1]
+
+    // ALWAYS scroll user messages to top - this eliminates jarring
+    if (lastMessage.role === 'user') {
+      // Immediate scroll to ensure user message appears at top
+      // Use requestAnimationFrame for smooth DOM updates
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          scrollToUserMessage()
+          // Mark that we're not manually scrolling since we positioned the user message
+          setIsUserScrolling(false)
+          setShouldAutoScroll(true)
+        }, 10) // Minimal delay for DOM update
+      })
+    }
+    // For AI responses, don't auto-scroll unless user is actively at bottom
+    // This prevents jarring during streaming
   }, [messages])
 
   const handleFormSubmit = async (e: FormEvent) => {
@@ -322,7 +387,7 @@ export default function ChatPage() {
     if (currentConversation?.id === convId) {
       setCurrentConversation(null)
       setChatMessages([])
-      localStorage.removeItem('currentConversationId')
+      sessionStorage.removeItem('currentConversationId')
     }
     setShowDeleteConfirm(null)
   }
@@ -348,7 +413,7 @@ export default function ChatPage() {
   }
 
   const signOut = async () => {
-    localStorage.removeItem('currentConversationId')
+    sessionStorage.removeItem('currentConversationId')
     await supabase.auth.signOut()
     router.push('/auth')
   }
@@ -363,7 +428,7 @@ export default function ChatPage() {
             onClick={() => {
               setCurrentConversation(null)
               setChatMessages([])
-              localStorage.removeItem('currentConversationId')
+              sessionStorage.removeItem('currentConversationId')
             }}
             className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-gray-800 rounded-lg transition-colors"
           >
@@ -491,7 +556,11 @@ export default function ChatPage() {
         </div>
 
         {/* Messages area */}
-        <div className="flex-1 overflow-y-auto">
+        <div 
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto relative"
+          onScroll={handleScroll}
+        >
           {/* Extended conversation mode indicator */}
           {currentConversation && currentConversation.token_count >= 200000 && rollingModeAcknowledged && (
             <div className="sticky top-0 z-10 bg-[#1a1a1a]/95 backdrop-blur-sm border-b border-gray-800 px-4 py-2">
@@ -538,6 +607,7 @@ export default function ChatPage() {
                 return (
                   <div
                     key={message.id}
+                    data-message-role={message.role}
                     className={`mb-6 ${!hasWebSearch && !hasLifeInsuranceRecommendations ? 'max-w-3xl mx-auto px-4' : ''} ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
                   >
                     {message.role === 'assistant' ? (
@@ -959,6 +1029,25 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
           )}
+          
+          {/* Scroll to bottom button */}
+          {isUserScrolling && !shouldAutoScroll && (
+            <div className="absolute bottom-4 right-4">
+              <button
+                onClick={() => {
+                  setShouldAutoScroll(true)
+                  setIsUserScrolling(false)
+                  scrollToBottom()
+                }}
+                className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 rounded-full p-3 text-white hover:bg-gray-700 transition-all duration-200 shadow-lg"
+                title="Scroll to bottom"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Input area */}
@@ -1052,7 +1141,7 @@ export default function ChatPage() {
                   setChatMessages([])
                   setShowTokenLimitModal(false)
                   setRollingModeAcknowledged(false)
-                  localStorage.removeItem('currentConversationId')
+                  sessionStorage.removeItem('currentConversationId')
                 }}
                 className="flex-1 bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium"
               >

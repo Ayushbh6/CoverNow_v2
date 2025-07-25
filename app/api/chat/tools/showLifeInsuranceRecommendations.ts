@@ -41,11 +41,24 @@ export interface ShowRecommendationsResult {
 function hasMinimumRequiredFields(data: any): { valid: boolean; missing: string[] } {
   const missing: string[] = [];
   
+  // Required field 1: Smoking Status
   if (data.smoking_status === undefined || data.smoking_status === null) {
     missing.push('smoking status');
   }
+  
+  // Required field 2: Occupation
   if (!data.occupation) {
     missing.push('occupation');
+  }
+  
+  // Required field 3: Annual Income
+  if (!data.annual_income || data.annual_income <= 0) {
+    missing.push('annual income');
+  }
+  
+  // Required field 4: Age (either age field or date of birth)
+  if (!data.age && !data.dob) {
+    missing.push('age or date of birth');
   }
   
   return { valid: missing.length === 0, missing };
@@ -108,8 +121,40 @@ function calculatePremium(data: any): { monthly: number; annual: number; min?: n
   };
 }
 
+// Helper function to calculate smart coverage amount based on income
+function calculateSmartCoverageAmount(userData: any): number {
+  if (!userData.annual_income || userData.annual_income <= 0) {
+    return 5000000; // Fallback to 50 lakhs if no income
+  }
+  
+  // Industry standard: 10-15x annual income, we'll use 12x as default
+  const recommendedCoverage = userData.annual_income * 12;
+  
+  // Ensure minimum coverage of 10 lakhs and maximum practical limit of 10 crores
+  const minCoverage = 1000000; // 10 lakhs
+  const maxCoverage = 100000000; // 10 crores
+  
+  return Math.max(minCoverage, Math.min(maxCoverage, recommendedCoverage));
+}
+
+// Helper function to calculate smart policy term based on age
+function calculateSmartPolicyTerm(userData: any): number {
+  const age = userData.age || (userData.dob ? new Date().getFullYear() - new Date(userData.dob).getFullYear() : 30);
+  
+  // Age-based term recommendations for retirement planning
+  if (age <= 25) return 30; // Young professionals - longest term
+  if (age <= 35) return 25; // Early career - long term
+  if (age <= 45) return 20; // Mid career - medium term
+  if (age <= 55) return 15; // Later career - shorter term
+  return 10; // Near retirement - minimum term
+}
+
 // Helper function to generate insurance products
 function generateInsuranceProducts(userData: any): InsuranceProduct[] {
+  // Calculate smart defaults for coverage amount and policy term
+  const coverageAmount = userData.coverage_amount || calculateSmartCoverageAmount(userData);
+  const policyTerm = userData.policy_term || calculateSmartPolicyTerm(userData);
+  
   const products = [
     {
       name: 'SecureLife Plus',
@@ -176,6 +221,8 @@ function generateInsuranceProducts(userData: any): InsuranceProduct[] {
   return products.map((product, index) => {
     const premium = calculatePremium({
       ...userData,
+      coverage_amount: coverageAmount,
+      policy_term: policyTerm,
       // Add some variation for different products
       variation: index * 0.1
     });
@@ -189,9 +236,7 @@ function generateInsuranceProducts(userData: any): InsuranceProduct[] {
       features.push('Higher premium due to smoking');
     }
 
-    const coverageAmount = userData.coverage_amount || 5000000; // Default 50 lakhs
-
-    const hasCompleteData = userData.age && userData.annual_income && userData.city && userData.coverage_amount;
+    const hasCompleteData = userData.age && userData.annual_income && userData.city;
 
     return {
       id: randomUUID(),
