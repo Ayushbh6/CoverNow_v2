@@ -4,7 +4,7 @@ An AI-powered insurance advisory platform that democratizes insurance access in 
 
 ## 🚀 Overview
 
-CoverNow is a Next.js-based platform featuring **Aria**, an AI insurance assistant powered by Google Gemini 2.5 Flash. The platform provides intelligent insurance recommendations, policy guidance, and personalized advice while maintaining strict data security and user privacy.
+CoverNow is a Next.js-based platform featuring **Aria**, an AI insurance assistant powered by OpenAI GPT-4.1. The platform provides intelligent insurance recommendations, policy guidance, and personalized advice while maintaining strict data security and user privacy.
 
 ### Key Features
 
@@ -22,7 +22,7 @@ CoverNow is a Next.js-based platform featuring **Aria**, an AI insurance assista
 
 - **Frontend**: Next.js 15 with App Router, TypeScript, Tailwind CSS v4
 - **Backend**: Supabase (PostgreSQL + Auth + RLS)
-- **AI**: Vercel AI SDK + OpenRouter + Google Gemini 2.5 Flash
+- **AI**: Vercel AI SDK + OpenRouter + OpenAI GPT-4.1 (Deep Research: Google Gemini 2.5 Flash)
 - **Authentication**: Supabase Auth with email confirmation
 - **Deployment**: Vercel (recommended)
 
@@ -107,7 +107,7 @@ npm run lint
 - **Income Processing**: Handles Indian currency formats (lakhs/crores)
 - **Date Intelligence**: Converts various date formats accurately
 - **Contextual Memory**: Remembers user preferences within conversations
-- **Token Management**: Tracks usage with intelligent conversation limits
+- **Token Management**: Smart rolling conversation window at 200k tokens
 
 ### Intelligent Conversation Flow
 
@@ -138,9 +138,13 @@ npm run lint
 ### Conversation Management
 
 - Real-time streaming responses for better user experience
-- Persistent conversation history
-- Intelligent token usage tracking
-- Context-aware conversation limits
+- Persistent conversation history across browser tabs
+- Intelligent token usage tracking with 200k soft limit
+- **Rolling Conversation Window** (New!):
+  - User-friendly warning at token limit instead of hard stop
+  - Option to continue with automatic message pruning
+  - Visual indicators for extended conversation mode
+  - Maintains conversation quality while allowing continuity
 
 ### User Experience
 
@@ -199,6 +203,7 @@ Ensure all required environment variables are set:
 - [x] Real-time chat with conversation persistence
 - [x] Context-aware response generation
 - [x] Health condition and personal data management
+- [x] Rolling conversation window for extended chats (200k+ tokens)
 
 ### Upcoming Features 🚧
 

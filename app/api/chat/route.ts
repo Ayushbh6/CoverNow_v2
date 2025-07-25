@@ -70,14 +70,27 @@ export async function POST(req: NextRequest) {
 
     // Check if conversation has reached token limit (200k)
     if (conversation.token_count >= 200000) {
-      return new Response(JSON.stringify({ 
-        error: 'Token limit reached',
-        message: 'This conversation has reached its context limit. Please start a new chat to continue.',
-        tokenCount: conversation.token_count
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      // Check if user has opted to continue in rolling mode
+      const rollingModeAcknowledged = req.headers.get('x-rolling-mode-acknowledged') === 'true';
+      
+      if (!rollingModeAcknowledged) {
+        // First time hitting limit - return warning (not error)
+        return new Response(JSON.stringify({ 
+          warning: 'token_limit_approaching',
+          message: 'You\'ve reached the conversation limit. For best results, start a new chat. You can also continue here (quality might suffer).',
+          tokenCount: conversation.token_count
+        }), {
+          status: 200, // Success with warning
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // User acknowledged - implement rolling window
+      // Remove oldest user-assistant pair (first 2 messages)
+      // The messages array from useChat is already in chronological order
+      if (messages.length >= 2) {
+        messages.splice(0, 2); // Remove first user message and first assistant response
+      }
     }
 
     const openrouter = createOpenRouter({

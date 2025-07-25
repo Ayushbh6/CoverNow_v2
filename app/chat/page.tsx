@@ -59,10 +59,14 @@ export default function ChatPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
 
   const [showTokenLimitModal, setShowTokenLimitModal] = useState(false)
+  const [rollingModeAcknowledged, setRollingModeAcknowledged] = useState(false)
   
   const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages: setChatMessages, error } = useChat({
     api: '/api/chat',
     maxSteps: 15, // Match the server-side maxSteps
+    headers: rollingModeAcknowledged ? {
+      'x-rolling-mode-acknowledged': 'true'
+    } : undefined,
     onFinish: () => {
       loadConversations()
     },
@@ -74,6 +78,19 @@ export default function ChatPage() {
         }
       } catch {
         console.error('Chat error:', error)
+      }
+    },
+    onResponse: async (response) => {
+      // Check for token limit warning
+      if (response.status === 200) {
+        try {
+          const data = await response.clone().json()
+          if (data.warning === 'token_limit_approaching') {
+            setShowTokenLimitModal(true)
+          }
+        } catch {
+          // Not a JSON response, continue normally
+        }
       }
     },
     initialMessages: [],
@@ -272,6 +289,7 @@ export default function ChatPage() {
     await loadMessages(conv.id)
     // Reset token limit modal when switching conversations
     setShowTokenLimitModal(false)
+    setRollingModeAcknowledged(false) // Reset for new conversation
   }
 
   const deleteConversation = async (convId: string) => {
@@ -450,6 +468,17 @@ export default function ChatPage() {
 
         {/* Messages area */}
         <div className="flex-1 overflow-y-auto">
+          {/* Extended conversation mode indicator */}
+          {currentConversation && currentConversation.token_count >= 200000 && rollingModeAcknowledged && (
+            <div className="sticky top-0 z-10 bg-[#1a1a1a]/95 backdrop-blur-sm border-b border-gray-800 px-4 py-2">
+              <div className="text-xs text-orange-400 flex items-center gap-1">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <span>Extended conversation mode - older messages are being removed to maintain quality</span>
+              </div>
+            </div>
+          )}
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-400">
               <div className="w-20 h-20 mb-8 relative">
@@ -823,15 +852,15 @@ export default function ChatPage() {
                   ? "Context limit reached. Start a new chat to continue." 
                   : "How can I help you today?"}
                 className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none"
-                disabled={isLoading || !!currentConversation?.token_count && currentConversation.token_count >= 200000}
+                disabled={isLoading || (!!currentConversation?.token_count && currentConversation.token_count >= 200000 && !rollingModeAcknowledged)}
               />
 
               {/* Send button */}
               <button
                 type="submit"
-                disabled={isLoading || !input.trim() || !!currentConversation?.token_count && currentConversation.token_count >= 200000}
+                disabled={isLoading || !input.trim() || (!!currentConversation?.token_count && currentConversation.token_count >= 200000 && !rollingModeAcknowledged)}
                 className={`p-2 rounded-lg transition-colors ${
-                                      input.trim() && !isLoading && (!currentConversation || !currentConversation.token_count || currentConversation.token_count < 200000)
+                  input.trim() && !isLoading && (!currentConversation || !currentConversation.token_count || currentConversation.token_count < 200000 || rollingModeAcknowledged)
                     ? 'bg-white text-black hover:bg-gray-200'
                     : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                 }`}
@@ -859,7 +888,7 @@ export default function ChatPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-white">Context Limit Reached</h3>
+                <h3 className="text-lg font-semibold text-white">Conversation Limit Reached</h3>
               </div>
               <button
                 onClick={() => setShowTokenLimitModal(false)}
@@ -872,7 +901,12 @@ export default function ChatPage() {
             </div>
             
             <p className="text-gray-300 mb-6">
-              This conversation has reached its context limit. Please start a new chat to continue.
+              You've reached the conversation limit. For best results, start a new chat.
+              <br />
+              <span className="text-sm">
+                You can also continue here 
+                <span className="text-gray-400"> (quality might suffer)</span>
+              </span>
             </p>
             
             <div className="flex gap-3">
@@ -881,6 +915,7 @@ export default function ChatPage() {
                   setCurrentConversation(null)
                   setChatMessages([])
                   setShowTokenLimitModal(false)
+                  setRollingModeAcknowledged(false)
                   localStorage.removeItem('currentConversationId')
                 }}
                 className="flex-1 bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium"
@@ -888,10 +923,13 @@ export default function ChatPage() {
                 Start New Chat
               </button>
               <button
-                onClick={() => setShowTokenLimitModal(false)}
+                onClick={() => {
+                  setRollingModeAcknowledged(true)
+                  setShowTokenLimitModal(false)
+                }}
                 className="flex-1 bg-gray-700 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors font-medium"
               >
-                Stay Here
+                Continue Anyway
               </button>
             </div>
           </div>
