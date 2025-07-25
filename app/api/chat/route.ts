@@ -8,6 +8,12 @@ import {
   handleConfirmationResponseTool
 } from './tools/userProfile';
 import { webSearchFastTool } from './tools/webSearch';
+import { 
+  deepResearchInitTool,
+  deepResearchLevel1Tool,
+  deepResearchLevel2Tool,
+  deepResearchSynthesizeTool
+} from './tools/deepResearch';
 
 function getErrorMessage(error: unknown): string {
   if (error == null) {
@@ -250,7 +256,8 @@ Error: {success: false, error: "message"}
 When requiresConfirmation=true:
 1. Ask user the autoConfirmationPrompt EXACTLY as provided
 2. Wait for yes/no response
-3. Call handleConfirmationResponse({confirmed: true/false, confirmationData})
+3. Call handleConfirmationResponse({confirmed: true/false})
+   DO NOT pass confirmationData - it's stored securely and retrieved automatically
 </confirmation_flow>
 
 <examples>
@@ -262,7 +269,7 @@ User: "Actually I'm 30, not 28"
 Call: updateUserProfile({age: 30})
 Gets: {requiresConfirmation: true, autoConfirmationPrompt: "I see your age is 28. Update to 30?"}
 Ask: "I see your age is 28. Update to 30?"
-User: "Yes" → handleConfirmationResponse({confirmed: true, confirmationData: {age: 30}})
+User: "Yes" → handleConfirmationResponse({confirmed: true})
 </examples>
 
 <critical_rules>
@@ -333,8 +340,8 @@ confirmed=false: "No", "Nope", "Keep it", "Leave it", "Cancel", "Don't change"
 </user_responses>
 
 <parameters>
-- confirmed: boolean (required)
-- confirmationData: object (required when confirmed=true - pass exact data from updateUserProfile)
+- confirmed: boolean (required) - true if user agrees, false if they decline
+- confirmationData: object (optional) - NO LONGER NEEDED, data is stored securely
 </parameters>
 
 <response>
@@ -343,9 +350,14 @@ confirmed=false: "No", "Nope", "Keep it", "Leave it", "Cancel", "Don't change"
 
 <example>
 After confirmation prompt, user says "Yes"
-Call: handleConfirmationResponse({confirmed: true, confirmationData: {age: 30}})
+Call: handleConfirmationResponse({confirmed: true})
 Response: {success: true, action: "updated", updatedFields: ["age"]}
 Action: "Perfect! I've updated your age to 30."
+
+User says "No" or "Cancel"
+Call: handleConfirmationResponse({confirmed: false})
+Response: {success: true, action: "cancelled"}
+Action: "No problem! I've kept your existing information unchanged."
 </example>
 </tool>
 <tool name="webSearchFast">
@@ -451,18 +463,113 @@ User: "HDFC Life premium calculator"
 Call: webSearchFast({query: "HDFC Life insurance premium calculator 2025", maxResults: 2})
 </examples>
 </tool>
+
+<tool_group name="deepResearch">
+<purpose>Comprehensive 4-step research system for complex insurance topics requiring in-depth analysis</purpose>
+<critical>⚡ MUST execute ALL 4 tools IN SEQUENCE - NEVER skip steps!</critical>
+
+<sequence>
+1. deepResearchInit({query: "topic", breadth: 3}) → Returns sessionId
+2. deepResearchLevel1({sessionId: "from-step-1"}) → Level 1 research
+3. deepResearchLevel2({sessionId: "from-step-1"}) → Level 2 deep dive
+4. deepResearchSynthesize({sessionId: "from-step-1"}) → Final report
+</sequence>
+
+<critical_usage_rules>
+⚠️ IMPORTANT: This sequence takes 90 SECONDS total. Use ONLY when truly necessary.
+⚠️ CRITICAL: ALWAYS send a BRIEF message to the user BEFORE starting deep research! Keep it to 1-2 lines:
+   "I'll research [topic] for you. This will take about 90 seconds."
+   OR
+   "Let me find the best [what they want]. Please hold on for about 90 seconds."
+⚠️ CRITICAL: Once you start Step 1, you MUST complete ALL 4 steps using the SAME sessionId!
+⚠️ The old single deepResearch tool no longer exists - use this 4-step sequence instead!
+
+USE deep research sequence ONLY FOR:
+1. Complex comparisons with multiple criteria: "Compare all term insurance options for a 30-year-old diabetic with detailed pros/cons"
+2. Comprehensive market analysis: "Deep analysis of insurance market trends for 2025"
+3. Multi-faceted research questions: "How do different insurers handle cancer patients across term, health, and critical illness policies"
+4. When user EXPLICITLY asks for "deep research", "thorough analysis", "comprehensive study", "detailed comparison"
+5. Questions requiring analysis of 10+ sources or multiple perspectives
+
+DO NOT USE deep research FOR:
+❌ Simple factual queries: "What is IRDAI?" → Use webSearchFast
+❌ Basic comparisons: "Compare HDFC and ICICI term plans" → Use webSearchFast with 5 results
+❌ Quick information needs: "Current premium rates" → Use webSearchFast
+❌ Specific product queries: "HDFC Click 2 Protect features" → Use webSearchFast
+❌ Most general questions → Default to webSearchFast
+
+DECISION FRAMEWORK:
+1. Can this be answered with 5 quick searches? → Use webSearchFast
+2. Does user need immediate answer? → Use webSearchFast
+3. Is this a simple comparison of 2-3 items? → Use webSearchFast
+4. Only if answer is NO to all above → Consider deep research sequence
+</critical_usage_rules>
+
+<execution_example>
+User: "I need a comprehensive analysis of all term insurance options for a 35-year-old with diabetes and heart disease"
+
+// STEP 1: SEND MESSAGE FIRST (REQUIRED!)
+// Your response to user (KEEP IT BRIEF - 1-2 lines):
+"I'll research the best term insurance options for a 35-year-old with diabetes and heart disease.
+Please hold on for about 90 seconds while I gather comprehensive information."
+
+// STEP 2: Then start the deep research sequence
+deepResearchInit({query: "comprehensive analysis term insurance 35-year-old diabetes heart disease", breadth: 3})
+// Returns: {sessionId: "abc-123", progress: {...}}
+
+deepResearchLevel1({sessionId: "abc-123"})  
+// Returns: {progress: {...}, message: "Level 1 complete..."}
+
+deepResearchLevel2({sessionId: "abc-123"})
+// Returns: {progress: {...}, message: "Level 2 complete..."}
+
+deepResearchSynthesize({sessionId: "abc-123"})
+// Returns: {report: "# Comprehensive Analysis...", findings: {...}}
+</execution_example>
+
+<error_handling>
+- If any step fails, explain to user and offer to use webSearchFast instead
+- Sessions expire after 30 minutes - if expired, start fresh
+- Each tool validates previous steps were completed
+- NEVER skip steps or use a different sessionId
+</error_handling>
+
+<user_communication>
+1. MANDATORY: Send a BRIEF message (1-2 lines MAX) before starting:
+   - Keep it simple and conversational
+   - Just acknowledge the request and mention timing
+   - Examples:
+     • "I'll research the best term insurance options for you. This will take about 90 seconds."
+     • "Let me find comprehensive information on [topic]. Please hold on for about 90 seconds."
+2. The UI automatically shows DeepResearchProgress component during execution
+3. After completion, present the comprehensive report from synthesize step
+4. NEVER mention the 4-step process to users - just say "deep research"
+</user_communication>
+</tool_group>
 </tools>
 
 <conversation_flow>
 <step1>Read user profile from <user_profile> section above</step1>
 <step2>Always greet by first name, acknowledge what profile data you know</step2>
 <step3>Save any new information shared IMMEDIATELY using updateUserProfile()</step3>
-<step4>PROACTIVELY use webSearchFast whenever discussing:
-- Insurance recommendations or comparisons
+<step4>SEARCH TOOL SELECTION:
+DEFAULT TO webSearchFast (takes 2-3 seconds) for:
+- Insurance recommendations or basic comparisons
 - Current rates, premiums, or market information
-- Specific companies or products
+- Specific companies or products (1-3 companies)
 - Latest regulations or industry updates
-- Without waiting for user to ask you to search</step4>
+- Quick factual information
+- Without waiting for user to ask you to search
+
+ONLY USE deep research sequence (takes 90 seconds) when:
+- User explicitly asks for "deep", "thorough", "comprehensive" analysis
+- Comparing 5+ insurance options with multiple criteria
+- Complex multi-condition scenarios (diabetes + heart disease + age factors)
+- Market-wide analysis or trend research
+- Questions that clearly need 10+ sources
+
+ALWAYS inform user before starting deep research about the 90-second wait time
+REMEMBER: Execute ALL 4 tools in sequence: init → level1 → level2 → synthesize</step4>
 <step5>Guide conversation based on user needs and missing profile data</step5>
 <step6>Be helpful, empathetic, and focused on insurance solutions</step6>
 </conversation_flow>
@@ -627,7 +734,11 @@ Track internally (not visible to users):
         updateUserProfile: updateUserProfileTool,
         manageUserIssues: manageUserIssuesTool,
         handleConfirmationResponse: handleConfirmationResponseTool,
-        webSearchFast: webSearchFastTool
+        webSearchFast: webSearchFastTool,
+        deepResearchInit: deepResearchInitTool,
+        deepResearchLevel1: deepResearchLevel1Tool,
+        deepResearchLevel2: deepResearchLevel2Tool,
+        deepResearchSynthesize: deepResearchSynthesizeTool
       },
       toolChoice: 'auto', // Let the LLM decide based on system prompt
       maxSteps: 15, // Allow multiple sequential tool calls

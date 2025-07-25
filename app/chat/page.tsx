@@ -8,9 +8,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
-import { Message as AiMessage, ToolInvocation } from 'ai/react'
-import { useChat } from '@ai-sdk/react'
+import { Message as AiMessage, useChat } from '@ai-sdk/react'
 import SearchResults from '@/app/components/SearchResults'
+import DeepResearchProgress from '@/app/components/DeepResearchProgress'
 
 interface Conversation {
   id: string
@@ -187,8 +187,12 @@ export default function ChatPage() {
           toolName: toolCall.toolName,
           args: toolCall.args,
           result: toolCall.result
-        })) : undefined
-      }))
+        })) : undefined,
+        // The 'parts' property is part of the new SDK, so we'll map to it
+        // For now, we'll just put the content in a text part.
+        // This will be enhanced later for proper tool rendering.
+        parts: [{ type: 'text', text: cleanEmojis(msg.content) }] 
+      }));
       setChatMessages(cleanedMessages)
     }
   }
@@ -461,6 +465,15 @@ export default function ChatPage() {
                 const hasWebSearch = message.role === 'assistant' && 
                   message.toolInvocations?.some(inv => inv.toolName === 'webSearchFast' && 'result' in inv && inv.result?.success);
 
+                // Check if this message has a deep research tool invocation
+                const hasDeepResearch = message.role === 'assistant' &&
+                  message.toolInvocations?.some(inv => 
+                    inv.toolName === 'deepResearchInit' || 
+                    inv.toolName === 'deepResearchLevel1' || 
+                    inv.toolName === 'deepResearchLevel2' || 
+                    inv.toolName === 'deepResearchSynthesize'
+                  );
+
                 return (
                   <div
                     key={message.id}
@@ -473,21 +486,26 @@ export default function ChatPage() {
                             <span className="text-xs font-bold">AI</span>
                           </div>
                           <div className="flex-1">
-                            <div className="text-white prose prose-invert max-w-none
-                              prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700
-                              prose-code:text-orange-400 prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-                              prose-strong:text-orange-400 prose-em:text-orange-300
-                              prose-headings:text-orange-400 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
-                              prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-orange-400
-                              prose-blockquote:border-orange-400 prose-blockquote:text-gray-300
-                              prose-a:text-orange-400 prose-a:underline hover:prose-a:text-orange-300">
-                              <ReactMarkdown 
-                                remarkPlugins={[remarkGfm]}
-                                rehypePlugins={[rehypeHighlight]}
-                              >
-                                {cleanEmojis(message.content)}
-                              </ReactMarkdown>
-                            </div>
+                            {/* Only render message content if it's NOT showing deep research final results */}
+                            {!(hasDeepResearch && message.toolInvocations?.some(inv => 
+                              inv.toolName === 'deepResearchSynthesize' && 'result' in inv && inv.result?.success
+                            )) && message.content && (
+                              <div className="text-white prose prose-invert max-w-none
+                                prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700
+                                prose-code:text-orange-400 prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                                prose-strong:text-orange-400 prose-em:text-orange-300
+                                prose-headings:text-orange-400 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
+                                prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-orange-400
+                                prose-blockquote:border-orange-400 prose-blockquote:text-gray-300
+                                prose-a:text-orange-400 prose-a:underline hover:prose-a:text-orange-300">
+                                <ReactMarkdown 
+                                  remarkPlugins={[remarkGfm]}
+                                  rehypePlugins={[rehypeHighlight]}
+                                >
+                                  {cleanEmojis(message.content)}
+                                </ReactMarkdown>
+                              </div>
+                            )}
                             {isLoading && messages[messages.length - 1].id === message.id && (
                               <div className="mt-2">
                                 <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse inline-block"></div>
@@ -496,7 +514,7 @@ export default function ChatPage() {
                           </div>
                         </div>
                         {/* Render tool invocations outside of the max-width container for web search */}
-                        {message.toolInvocations?.map((toolInvocation: ToolInvocation) => {
+                        {message.toolInvocations?.map((toolInvocation: any) => {
                           const toolCallId = toolInvocation.toolCallId;
 
                           // Render web search results
@@ -531,6 +549,170 @@ export default function ChatPage() {
                             );
                           }
 
+                          // Render deep research progress and results
+                          if (toolInvocation.toolName === 'deepResearchInit') {
+                            // Check if synthesis is complete for this message
+                            const hasSynthesisComplete = message.toolInvocations?.some(inv => 
+                              inv.toolName === 'deepResearchSynthesize' && 'result' in inv && inv.result?.success
+                            );
+                            
+                            return 'result' in toolInvocation ? (
+                              toolInvocation.result?.success ? (
+                                !hasSynthesisComplete ? (
+                                  <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                      <div className="w-4 h-4 bg-blue-500/20 rounded-full flex items-center justify-center">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                                      </div>
+                                      <span>Performing deep research...</span>
+                                    </div>
+                                  </div>
+                                ) : null
+                              ) : (
+                                <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                    <p className="text-sm text-red-400">
+                                      Failed to start research: {toolInvocation.result?.error || 'Unknown error'}
+                                    </p>
+                                  </div>
+                                </div>
+                              )
+                            ) : (
+                              <div key={toolCallId} className="mt-4">
+                                <DeepResearchProgress 
+                                  query={toolInvocation.args?.query || 'Initializing research...'}
+                                  phase="reconnaissance"
+                                  progressData={'result' in toolInvocation && toolInvocation.result?.progress ? 
+                                    { insights: toolInvocation.result.progress.insights, totalSearches: toolInvocation.result.progress.totalSearches } : 
+                                    undefined}
+                                />
+                              </div>
+                            );
+                          }
+
+                          if (toolInvocation.toolName === 'deepResearchLevel1' || toolInvocation.toolName === 'deepResearchLevel2') {
+                            return 'result' in toolInvocation ? (
+                              toolInvocation.result?.success ? null : (
+                                <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                    <p className="text-sm text-red-400">
+                                      Research phase failed: {toolInvocation.result?.error || 'Unknown error'}
+                                    </p>
+                                  </div>
+                                </div>
+                              )
+                            ) : (
+                              <div key={toolCallId} className="mt-4">
+                                <DeepResearchProgress 
+                                  query={message.toolInvocations?.find(inv => inv.toolName === 'deepResearchInit')?.args?.query || 'Researching...'}
+                                  phase={toolInvocation.toolName === 'deepResearchLevel1' ? 'level1' : 'level2'}
+                                  progressData={'result' in toolInvocation && toolInvocation.result?.progress ? 
+                                    { insights: toolInvocation.result.progress.insights, totalSearches: toolInvocation.result.progress.totalSearches } : 
+                                    undefined}
+                                />
+                              </div>
+                            );
+                          }
+
+                          if (toolInvocation.toolName === 'deepResearchSynthesize') {
+                            return 'result' in toolInvocation ? (
+                              toolInvocation.result?.success ? (
+                                <div key={toolCallId} className="mt-4 max-w-4xl mx-auto px-4">
+                                  {/* Show the final report in markdown */}
+                                  <div className="prose prose-invert max-w-none
+                                    prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700
+                                    prose-code:text-orange-400 prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                                    prose-strong:text-orange-400 prose-em:text-orange-300
+                                    prose-headings:text-orange-400 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
+                                    prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-orange-400
+                                    prose-blockquote:border-orange-400 prose-blockquote:text-gray-300
+                                    prose-a:text-orange-400 prose-a:underline hover:prose-a:text-orange-300
+                                    prose-table:border-collapse prose-table:w-full
+                                    prose-th:border prose-th:border-gray-700 prose-th:px-3 prose-th:py-2 prose-th:bg-gray-800 prose-th:text-orange-400
+                                    prose-td:border prose-td:border-gray-700 prose-td:px-3 prose-td:py-2">
+                                    <ReactMarkdown 
+                                      remarkPlugins={[remarkGfm]}
+                                      rehypePlugins={[rehypeHighlight]}
+                                    >
+                                      {toolInvocation.result.report}
+                                    </ReactMarkdown>
+                                  </div>
+                                  
+                                  {/* Show research stats */}
+                                  <div className="mt-6 p-4 bg-[#2a2a2a] rounded-lg border border-gray-800">
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-gray-400">
+                                        Research completed in {toolInvocation.result.duration}s
+                                      </span>
+                                      <span className="text-gray-400">
+                                        {toolInvocation.result.totalSearches} searches • {toolInvocation.result.findings.keyInsights.length} insights
+                                      </span>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Show sources */}
+                                  {toolInvocation.result.findings.sources && toolInvocation.result.findings.sources.length > 0 && (
+                                    <div className="mt-6">
+                                      <h3 className="text-lg font-semibold text-gray-300 mb-4">Sources</h3>
+                                      <div className="relative">
+                                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+                                          {toolInvocation.result.findings.sources.map((source: any, idx: number) => (
+                                            <div key={idx} className="flex-none w-80">
+                                              <a 
+                                                href={source.url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="block p-4 bg-[#2a2a2a] rounded-lg border border-gray-800 hover:border-gray-700 hover:bg-[#333333] transition-all h-full"
+                                              >
+                                                <div className="flex items-start justify-between mb-2">
+                                                  <div className="flex items-center gap-2 flex-1">
+                                                    <img 
+                                                      src={`https://www.google.com/s2/favicons?domain=${new URL(source.url).hostname}&sz=16`} 
+                                                      alt="" 
+                                                      className="w-4 h-4 flex-shrink-0"
+                                                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                                    />
+                                                    <p className="text-xs text-gray-500 truncate">
+                                                      {new URL(source.url).hostname}
+                                                    </p>
+                                                  </div>
+                                                  <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                                                    {Math.round(source.relevance * 100)}%
+                                                  </span>
+                                                </div>
+                                                <h4 className="text-sm font-medium text-blue-400 hover:text-blue-300 line-clamp-2">
+                                                  {source.title}
+                                                </h4>
+                                              </a>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                    <p className="text-sm text-red-400">
+                                      Deep research failed: {toolInvocation.result?.error || 'Unknown error'}
+                                    </p>
+                                  </div>
+                                </div>
+                              )
+                            ) : (
+                              <div key={toolCallId} className="mt-4">
+                                <DeepResearchProgress 
+                                  query={message.toolInvocations?.find(inv => inv.toolName === 'deepResearchInit')?.args?.query || 'Synthesizing research...'}
+                                  phase="synthesis"
+                                  progressData={'result' in toolInvocation && toolInvocation.result?.progress ? 
+                                    { insights: toolInvocation.result.progress.insights, totalSearches: toolInvocation.result.progress.totalSearches } : 
+                                    undefined}
+                                />
+                              </div>
+                            );
+                          }
+
                           // Other tools - show friendly status messages that hide after completion
                           const toolMessages: Record<string, { pending: string; completed: string }> = {
                             updateUserProfile: {
@@ -544,6 +726,22 @@ export default function ChatPage() {
                             handleConfirmationResponse: {
                               pending: 'Processing your response...',
                               completed: '✓ Response processed'
+                            },
+                            deepResearchInit: {
+                              pending: 'Aria is starting deep research...',
+                              completed: '✓ Research initialized'
+                            },
+                            deepResearchLevel1: {
+                              pending: 'Aria is conducting Level 1 research...',
+                              completed: '✓ Level 1 research completed'
+                            },
+                            deepResearchLevel2: {
+                              pending: 'Aria is conducting Level 2 deep dive...',
+                              completed: '✓ Level 2 research completed'
+                            },
+                            deepResearchSynthesize: {
+                              pending: 'Aria is generating comprehensive report...',
+                              completed: '✓ Deep research completed'
                             }
                           };
 

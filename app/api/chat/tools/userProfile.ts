@@ -279,12 +279,32 @@ export const updateUserProfileTool = tool({
         });
       }
       
-      // If fields need confirmation, automatically trigger confirmation flow
+      // If fields need confirmation, store in conversations table and trigger confirmation flow
       if (fieldsNeedingConfirmation.length > 0) {
+        // Get the most recent conversation for this user to store pending confirmation
+        const { data: recentConversation, error: convError } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
+          
+        if (!convError && recentConversation) {
+          // Store the pending confirmation data
+          await supabase
+            .from('conversations')
+            .update({
+              pending_confirmation: validatedParams,
+              pending_confirmation_created_at: new Date().toISOString()
+            })
+            .eq('id', recentConversation.id);
+        }
+        
         return {
           success: false,
           requiresConfirmation: true,
-          confirmationData: validatedParams, // Store the data for confirmation
+          confirmationData: validatedParams, // Still include for backward compatibility
           conflictingFields: fieldsNeedingConfirmation,
           confirmationMessage: generateConfirmationMessage(fieldsNeedingConfirmation),
           // This tells the AI to automatically ask for confirmation
@@ -511,7 +531,33 @@ export const handleConfirmationResponseTool = tool({
     try {
       const { confirmed, confirmationData } = params as { confirmed: boolean; confirmationData?: any };
       
+      const supabase = await createClient();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+      
       if (!confirmed) {
+        // Clear pending confirmation
+        const { data: recentConversation } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
+          
+        if (recentConversation) {
+          await supabase
+            .from('conversations')
+            .update({
+              pending_confirmation: null,
+              pending_confirmation_created_at: null
+            })
+            .eq('id', recentConversation.id);
+        }
+        
         return {
           success: true,
           message: "No problem! I've kept your existing information unchanged.",
@@ -519,25 +565,71 @@ export const handleConfirmationResponseTool = tool({
         };
       }
 
-      // User confirmed, proceed with the update
-      if (!confirmationData) {
+      // User confirmed, retrieve pending confirmation from DB
+      const { data: recentConversation, error: convError } = await supabase
+        .from('conversations')
+        .select('id, pending_confirmation, pending_confirmation_created_at')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (convError || !recentConversation || !recentConversation.pending_confirmation) {
+        // Fallback to confirmationData if provided (backward compatibility)
+        if (!confirmationData) {
+          return {
+            success: false,
+            error: "No pending confirmation found. Please try updating your profile again."
+          };
+        }
+        // Use the provided confirmationData as fallback
+        const result = await performProfileUpdate(confirmationData, supabase, user.id);
+        
+        if (result.success) {
+          return {
+            ...result,
+            message: "Perfect! I've updated your profile with the new information.",
+            action: 'updated'
+          };
+        } else {
+          return result;
+        }
+      }
+      
+      // Check if confirmation is expired (5 minutes)
+      const createdAt = new Date(recentConversation.pending_confirmation_created_at);
+      const now = new Date();
+      const diffMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+      
+      if (diffMinutes > 5) {
+        // Clear expired confirmation
+        await supabase
+          .from('conversations')
+          .update({
+            pending_confirmation: null,
+            pending_confirmation_created_at: null
+          })
+          .eq('id', recentConversation.id);
+          
         return {
           success: false,
-          error: "No confirmation data provided"
+          error: "The confirmation has expired. Please try updating your profile again."
         };
       }
 
-      const supabase = await createClient();
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        return { success: false, error: 'User not authenticated' };
-      }
-
-      // Perform the update with the confirmed data
-      const result = await performProfileUpdate(confirmationData, supabase, user.id);
+      // Perform the update with the stored confirmation data
+      const result = await performProfileUpdate(recentConversation.pending_confirmation, supabase, user.id);
       
       if (result.success) {
+        // Clear the pending confirmation after successful update
+        await supabase
+          .from('conversations')
+          .update({
+            pending_confirmation: null,
+            pending_confirmation_created_at: null
+          })
+          .eq('id', recentConversation.id);
+          
         return {
           ...result,
           message: "Perfect! I've updated your profile with the new information.",
