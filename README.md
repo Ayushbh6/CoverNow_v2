@@ -13,6 +13,9 @@ CoverNow is a Next.js-based platform featuring **Aria**, an AI insurance assista
 - 💬 **Real-time Chat**: Streaming responses with conversation persistence
 - 📊 **Smart Profiling**: Progressive user profile building through natural conversation
 - 🏥 **Health-Aware**: Pre-existing condition support and medical history management
+- 📋 **Life Insurance Quotes**: Personalized recommendations with smart defaults
+- 🔍 **Intelligent Search**: Real-time web search with domain-specific filtering
+- 📚 **Deep Research**: 90-second comprehensive analysis for complex topics
 - 📱 **Responsive Design**: Modern UI built with Tailwind CSS
 - 🛡️ **Privacy-First**: Enterprise-grade security and strict data protection
 
@@ -55,6 +58,7 @@ CoverNow is a Next.js-based platform featuring **Aria**, an AI insurance assista
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    OPENROUTER_API_KEY=your_openrouter_api_key
+   TAVILY_API_KEY=your_tavily_api_key  # For web search functionality
    ```
 
 4. **Set up your database**
@@ -100,21 +104,52 @@ npm run lint
 
 ## 🤖 AI Assistant Features
 
-### Aria's Capabilities
+### Aria's Core Capabilities
 
-- **Profile Management**: Automatically collects and updates user information
-- **Health History**: Manages pre-existing conditions separately for privacy
-- **Income Processing**: Handles Indian currency formats (lakhs/crores)
-- **Date Intelligence**: Converts various date formats accurately
-- **Contextual Memory**: Remembers user preferences within conversations
-- **Token Management**: Smart rolling conversation window at 200k tokens
+1. **📋 Life Insurance Quotes & Recommendations**
+   - Personalized quotes from 5 major insurers
+   - Smart form that shows only missing information
+   - Intelligent defaults: 12x annual income coverage, age-based terms
+   - Premium ranges for incomplete profiles
+   - Beautiful card-based UI with horizontal scrolling
 
-### Intelligent Conversation Flow
+2. **🔍 Intelligent Web Search**
+   - Real-time search using Tavily advanced API
+   - Smart domain filtering by context (IRDAI, PolicyBazaar, etc.)
+   - Always includes current year (2025) in searches
+   - Proactive searches without explicit user request
+   - 5 results with relevance scores and publish dates
 
-- Progressive information collection through natural dialogue
-- Context-aware responses based on user profile
-- Automatic data validation and confirmation
-- Multi-step insurance advisory workflows
+3. **📚 Deep Research System**
+   - 4-step sequential research for complex topics
+   - ~90 seconds for comprehensive analysis
+   - Generates detailed reports with comparisons
+   - Session-based with automatic cleanup
+   - Used only when 10+ sources needed
+
+4. **👤 Smart Profile Management**
+   - Transparent initial greeting showing all data on file
+   - Progressive profile building through conversation
+   - Separate handling for health conditions (privacy)
+   - Handles Indian formats (lakhs/crores, date formats)
+   - Conflict resolution with confirmations
+
+### Aria's Conversation Style
+
+- **Initial Greeting**: Shows complete profile summary with 9 data points
+- **Capabilities List**: Clear description of 4 main functions
+- **Natural Language**: Strategic name usage, not repetitive
+- **Empathetic**: Understanding responses to health conditions
+- **Proactive**: Suggests relevant actions based on profile
+- **Token Management**: Smart rolling window at 200k tokens
+
+### Intelligent Tools System
+
+- **Profile Tools**: `updateUserProfile`, `manageUserIssues`, `handleConfirmationResponse`
+- **Search Tools**: `webSearchFast` (2-3 seconds), Deep Research suite (90 seconds)
+- **Insurance Tools**: `collectLifeInsuranceInfo`, `showLifeInsuranceRecommendations`
+- **Automatic Usage**: Tools activate based on conversation context
+- **User-Friendly Status**: "Aria is finding information..." with green checkmarks
 
 ## 🔒 Security & Privacy
 
@@ -140,7 +175,7 @@ npm run lint
 - Real-time streaming responses for better user experience
 - Persistent conversation history across browser tabs
 - Intelligent token usage tracking with 200k soft limit
-- **Rolling Conversation Window** (New!):
+- **Rolling Conversation Window**:
   - User-friendly warning at token limit instead of hard stop
   - Option to continue with automatic message pruning
   - Visual indicators for extended conversation mode
@@ -148,10 +183,26 @@ npm run lint
 
 ### User Experience
 
+- **Initial Profile Transparency**: Complete data summary on first interaction
+- **Full-Width Results**: Web search and insurance quotes in horizontal cards
+- **Progress Indicators**: Real-time status for deep research phases
+- **Smart Forms**: Only show fields that need to be filled
+- **Tool Status Messages**: User-friendly processing indicators
 - Progressive web app capabilities
 - Mobile-responsive design
 - Intuitive chat interface
 - Seamless authentication flow
+
+### Data Management
+
+- **User Profile Fields**: 
+  - Personal: first_name, last_name, age, dob, gender, is_married
+  - Location & Income: city, annual_income, occupation
+  - Insurance: smoking_status, coverage_amount, policy_term
+  - Health: has_issues, issues (JSONB array)
+- **Automatic Calculations**: Age from DOB, smart insurance defaults
+- **Privacy Separation**: Health conditions stored separately
+- **Conflict Resolution**: Confirmation prompts for data updates
 
 ## 🛠️ Development
 
@@ -197,13 +248,20 @@ Ensure all required environment variables are set:
 
 ### Current Status ✅
 
-- [x] AI-powered conversational insurance assistant
+- [x] AI-powered conversational insurance assistant (Aria)
 - [x] Secure authentication and user management
-- [x] Intelligent user profiling system
+- [x] Intelligent user profiling system with 13 data fields
 - [x] Real-time chat with conversation persistence
 - [x] Context-aware response generation
 - [x] Health condition and personal data management
 - [x] Rolling conversation window for extended chats (200k+ tokens)
+- [x] Life insurance quotes with 5 personalized recommendations
+- [x] Intelligent web search with domain filtering (Tavily)
+- [x] Deep research system for complex topics (4-step, 90s)
+- [x] Smart forms showing only missing fields
+- [x] Full-width card layouts for results
+- [x] User-friendly tool status messages
+- [x] Initial greeting with complete profile transparency
 
 ### Upcoming Features 🚧
 

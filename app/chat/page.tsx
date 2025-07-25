@@ -238,7 +238,7 @@ export default function ChatPage() {
       // This ensures maximum space below for AI streaming
       const containerRect = container.getBoundingClientRect()
       const messageRect = lastUserMessageElement.getBoundingClientRect()
-      const targetScrollTop = container.scrollTop + messageRect.top - containerRect.top - 60 // Less padding for more space
+      const targetScrollTop = container.scrollTop + messageRect.top - containerRect.top - 20 // Minimal padding to maximize AI response space
       
       container.scrollTo({
         top: Math.max(0, targetScrollTop),
@@ -293,9 +293,60 @@ export default function ChatPage() {
         }, 10) // Minimal delay for DOM update
       })
     }
-    // For AI responses, don't auto-scroll unless user is actively at bottom
-    // This prevents jarring during streaming
-  }, [messages])
+    // For AI responses, scroll to show the AI message starting right after user message
+    else if (lastMessage.role === 'assistant') {
+      const container = messagesContainerRef.current
+      if (!container) return
+      
+      // Small delay to ensure DOM is updated with new message
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const aiMessageElements = container.querySelectorAll('[data-message-role="assistant"]')
+          const lastAiMessageElement = aiMessageElements[aiMessageElements.length - 1] as HTMLElement
+          
+          if (lastAiMessageElement && shouldAutoScroll) {
+            const containerRect = container.getBoundingClientRect()
+            const messageRect = lastAiMessageElement.getBoundingClientRect()
+            
+            // Check if AI message is below the viewport
+            if (messageRect.top > containerRect.bottom - 100) {
+              // Scroll to show AI message with some padding from top
+              const targetScrollTop = container.scrollTop + messageRect.top - containerRect.top - 40
+              
+              container.scrollTo({
+                top: targetScrollTop,
+                behavior: 'smooth'
+              })
+            }
+            
+            // For streaming responses, keep scrolling to bottom
+            if (isLoading && shouldAutoScroll && !isUserScrolling) {
+              scrollToBottom()
+            }
+          }
+        }, 50) // Small delay for DOM update
+      })
+    }
+  }, [messages, isLoading, shouldAutoScroll, isUserScrolling])
+
+  // Separate effect for continuous scrolling during streaming
+  useEffect(() => {
+    if (!isLoading || !shouldAutoScroll || isUserScrolling) return
+    
+    // Set up interval to keep scrolling during streaming
+    const scrollInterval = setInterval(() => {
+      const container = messagesContainerRef.current
+      if (container && shouldAutoScroll && !isUserScrolling) {
+        // Check if we're near bottom before scrolling
+        const nearBottom = isNearBottom()
+        if (nearBottom) {
+          scrollToBottom()
+        }
+      }
+    }, 100) // Check every 100ms
+    
+    return () => clearInterval(scrollInterval)
+  }, [isLoading, shouldAutoScroll, isUserScrolling])
 
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault()
