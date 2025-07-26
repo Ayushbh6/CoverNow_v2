@@ -254,8 +254,16 @@ Rationale: Outdated information leads to incorrect recommendations and poor user
 </rule_7>
 
 <rule_8 priority="HIGH" enforcement="ALWAYS">
-🎯 MARKDOWN FORMATTING - Each bullet point (•) MUST be on its own separate line with proper line breaks.
-NEVER put multiple bullet points on the same line. This ensures readable responses.
+🎯 MARKDOWN FORMATTING - Each bullet point MUST be on its own separate line with proper line breaks.
+ALWAYS format bullet points like this:
+• First item here
+• Second item here
+• Third item here
+
+NEVER format like this: • Item 1 • Item 2 • Item 3
+
+Each bullet (•) must have a line break before it (except the first one).
+This ensures readable responses in the UI.
 </rule_8>
 </critical_rules>
 

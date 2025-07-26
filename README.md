@@ -1,6 +1,6 @@
-# CoverNow AI Insurance Agent Platform
+# CoverNow Insurance Solutions Platform
 
-An AI-powered insurance advisory platform that democratizes insurance access in India by providing personalized, trustworthy, and accessible insurance guidance through conversational AI.
+An insurance advisory platform that democratizes insurance access in India by providing personalized, trustworthy, and accessible insurance guidance through conversational AI.
 
 ## 🚀 Overview
 
@@ -8,7 +8,9 @@ CoverNow is a Next.js-based platform featuring **Aria**, an AI insurance assista
 
 ### Key Features
 
-- 🤖 **AI-Powered Assistant**: Conversational AI that understands Indian insurance needs
+- 🤖 **AI Insurance Assistant**: Conversational AI that understands Indian insurance needs
+- 🎙️ **Voice Input**: Speech-to-text with audio visualization (gpt-4o-transcribe)
+- 🧮 **Smart Calculator**: Complex calculations for EMIs, premiums, and returns
 - 🔐 **Secure Authentication**: Email-based authentication with robust security
 - 💬 **Real-time Chat**: Streaming responses with conversation persistence
 - 📊 **Smart Profiling**: Progressive user profile building through natural conversation
@@ -25,7 +27,9 @@ CoverNow is a Next.js-based platform featuring **Aria**, an AI insurance assista
 
 - **Frontend**: Next.js 15 with App Router, TypeScript, Tailwind CSS v4
 - **Backend**: Supabase (PostgreSQL + Auth + RLS)
-- **AI**: Vercel AI SDK + OpenRouter + OpenAI GPT-4.1 (Deep Research: Google Gemini 2.5 Flash)
+- **AI**: Vercel AI SDK + OpenRouter + OpenAI GPT-4.1
+- **Speech**: OpenAI gpt-4o-transcribe for voice input
+- **Search**: Tavily AI-powered web search
 - **Authentication**: Supabase Auth with email confirmation
 - **Deployment**: Vercel (recommended)
 
@@ -59,6 +63,7 @@ CoverNow is a Next.js-based platform featuring **Aria**, an AI insurance assista
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    OPENROUTER_API_KEY=your_openrouter_api_key
    TAVILY_API_KEY=your_tavily_api_key  # For web search functionality
+   OPENAI_API_KEY=your_openai_api_key  # For speech transcription
    ```
 
 4. **Set up your database**
@@ -134,10 +139,24 @@ npm run lint
    - Handles Indian formats (lakhs/crores, date formats)
    - Conflict resolution with confirmations
 
+5. **🧮 Calculator**
+   - Complex mathematical calculations with Indian formatting
+   - EMI calculations with variable support
+   - Compound interest and returns calculations
+   - Safe evaluation prevents code injection
+   - Functions: sqrt, sin, cos, tan, log, ln, abs, round, etc.
+
+6. **🎙️ Voice Input**
+   - Click mic button to start recording
+   - Real-time audio waveform visualization
+   - Automatic transcription using gpt-4o-transcribe
+   - "Aria" name normalization (handles Arya, Ariya variations)
+   - Seamless integration with text input
+
 ### Aria's Conversation Style
 
 - **Initial Greeting**: Shows complete profile summary with 9 data points
-- **Capabilities List**: Clear description of 4 main functions
+- **Capabilities List**: Clear description of main functions
 - **Natural Language**: Strategic name usage, not repetitive
 - **Empathetic**: Understanding responses to health conditions
 - **Proactive**: Suggests relevant actions based on profile
@@ -148,6 +167,7 @@ npm run lint
 - **Profile Tools**: `updateUserProfile`, `manageUserIssues`, `handleConfirmationResponse`
 - **Search Tools**: `webSearchFast` (2-3 seconds), Deep Research suite (90 seconds)
 - **Insurance Tools**: `collectLifeInsuranceInfo`, `showLifeInsuranceRecommendations`
+- **Calculator Tool**: `calculator` for complex mathematical operations
 - **Automatic Usage**: Tools activate based on conversation context
 - **User-Friendly Status**: "Aria is finding information..." with green checkmarks
 
@@ -210,14 +230,39 @@ npm run lint
 
 ```
 covernow_v2/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes
-│   ├── auth/             # Authentication pages
-│   ├── chat/             # Chat interface
-│   └── layout.tsx        # Root layout
-├── utils/                 # Utility functions
-├── middleware.ts         # Auth middleware
-└── public/              # Static assets
+├── app/                        # Next.js App Router
+│   ├── api/
+│   │   ├── chat/              # Chat API endpoints
+│   │   │   ├── route.ts       # Main chat endpoint with AI integration
+│   │   │   └── tools/         # AI tool implementations
+│   │   │       ├── calculator.ts
+│   │   │       ├── collectLifeInsuranceInfo.ts
+│   │   │       ├── deepResearch.ts
+│   │   │       ├── showLifeInsuranceRecommendations.ts
+│   │   │       ├── userProfile.ts
+│   │   │       └── webSearch.ts
+│   │   ├── conversations/     # Conversation management APIs
+│   │   └── transcribe/        # Speech-to-text API
+│   │       └── route.ts       # OpenAI gpt-4o-transcribe integration
+│   ├── auth/                  # Authentication pages
+│   ├── chat/                  # Main chat interface
+│   │   └── page.tsx          # Chat UI with conversation management
+│   ├── products/              # Products showcase
+│   └── page.tsx              # Landing page
+├── components/
+│   ├── ui/                    # Reusable UI components
+│   ├── AudioVisualizer.tsx    # Voice recording waveform
+│   ├── DeepResearchProgress.tsx
+│   ├── LifeInsuranceForm.tsx
+│   ├── LifeInsuranceRecommendations.tsx
+│   ├── SearchResults.tsx
+│   └── landing-page.tsx
+├── utils/
+│   └── supabase/             # Supabase client utilities
+├── middleware.ts             # Auth middleware
+├── package.json
+├── README.md
+└── CLAUDE.md                 # AI assistant guidance
 ```
 
 ### Contributing
@@ -274,6 +319,12 @@ Ensure all required environment variables are set:
 - [x] Full-width card layouts for results
 - [x] User-friendly tool status messages
 - [x] Initial greeting with complete profile transparency
+- [x] Voice input with real-time transcription (gpt-4o-transcribe)
+- [x] Audio waveform visualization during recording
+- [x] Calculator tool for complex mathematical operations
+- [x] Optimistic assistant messages (immediate loading indicator)
+- [x] Small pulsating orb for loading states
+- [x] Italic typography on landing and products pages
 
 ### Upcoming Features 🚧
 

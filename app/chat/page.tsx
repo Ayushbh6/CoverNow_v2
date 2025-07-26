@@ -25,7 +25,7 @@ interface Conversation {
   token_count: number
 }
 
-// Function to clean up garbled emojis
+// Function to clean up garbled emojis and format bullet points
 function cleanEmojis(text: string): string {
   return text
     .replace(/ðŸ˜Š/g, '😊')
@@ -48,7 +48,12 @@ function cleanEmojis(text: string): string {
     .replace(/ðŸ"š/g, '📚')
     .replace(/ðŸ'»/g, '💻')
     .replace(/ðŸŒŸ/g, '🌟')
+    // Format bullet points to ensure they start on new lines
+    .replace(/\s*•\s*/g, '\n\n• ')         // Replace any bullet with newlines and clean spacing
+    .replace(/^\n\n•/, '•')                // Remove leading newlines from first bullet
+    .replace(/\n\n\n+•/g, '\n\n•')         // Prevent excessive newlines
 }
+
 
 export default function ChatPage() {
   const router = useRouter()
@@ -77,7 +82,10 @@ export default function ChatPage() {
   const [showTokenLimitModal, setShowTokenLimitModal] = useState(false)
   const [rollingModeAcknowledged, setRollingModeAcknowledged] = useState(false)
   
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages: setChatMessages, error, append } = useChat({
+  // Track when we're waiting for the initial AI response
+  const [waitingForResponse, setWaitingForResponse] = useState(false)
+  
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages: setChatMessages, error, append, status } = useChat({
     api: '/api/chat',
     maxSteps: 15, // Match the server-side maxSteps
     headers: rollingModeAcknowledged ? {
@@ -88,8 +96,10 @@ export default function ChatPage() {
     },
     onFinish: () => {
       loadConversations()
+      setWaitingForResponse(false)
     },
     onError: (error) => {
+      setWaitingForResponse(false)
       try {
         const errorData = JSON.parse(error.message)
         if (errorData.error === 'Token limit reached') {
@@ -118,6 +128,13 @@ export default function ChatPage() {
     },
     initialMessages: [],
   })
+
+  // Monitor status changes to clear waiting state when streaming starts
+  useEffect(() => {
+    if (status === 'streaming' || status === 'ready') {
+      setWaitingForResponse(false)
+    }
+  }, [status])
 
   // Check auth and load conversations
   useEffect(() => {
@@ -505,16 +522,8 @@ export default function ChatPage() {
 
       if (msgError) throw msgError
 
-      // Add optimistic assistant message to show loading state immediately
-      const tempAssistantMessage = {
-        id: `temp-${Date.now()}`,
-        role: 'assistant' as const,
-        content: '',
-        createdAt: new Date()
-      }
-      
-      // Add the placeholder assistant message
-      setChatMessages(prev => [...prev, tempAssistantMessage])
+      // Set waiting state when submitting
+      setWaitingForResponse(true)
 
       // Check if we have form data to include
       const formData = (window as any).__tempFormData;
@@ -800,7 +809,7 @@ export default function ChatPage() {
                       <>
                         <div className={`flex gap-4 ${hasWebSearch || hasLifeInsuranceRecommendations ? 'max-w-5xl mx-auto px-6' : ''}`}>
                           <div className="w-9 h-9 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-                            <span className="text-xs font-bold text-white">AI</span>
+                            <span className="text-xs font-bold text-white">A</span>
                           </div>
                           <div className="flex-1">
                             {/* Only render message content if it's NOT showing deep research final results or life insurance recommendations */}
@@ -1217,6 +1226,23 @@ export default function ChatPage() {
                   </div>
                 );
               })}
+              
+              {/* Show loading orb immediately after user message when waiting for response */}
+              {waitingForResponse && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
+                <div className="mb-10 max-w-5xl mx-auto px-6">
+                  <div className="flex gap-4">
+                    <div className="w-9 h-9 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                      <span className="text-xs font-bold text-white">A</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="mt-3">
+                        <div className="w-3 h-3 bg-[#22C55E] rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div ref={messagesEndRef} />
             </div>
           )}

@@ -109,8 +109,7 @@ function formatNumber(num: number): string {
 }
 
 export const calculatorTool = tool({
-  schema: calculatorZodSchema,
-  name: 'calculator',
+  parameters: calculatorSchema,
   description: 'Perform complex mathematical calculations including basic arithmetic, trigonometry, logarithms, and more',
   execute: async (params): Promise<CalculatorResponse> => {
     const { expression, variables } = params;
