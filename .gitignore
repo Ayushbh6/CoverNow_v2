@@ -47,3 +47,5 @@ next-env.d.ts
 .mcp.json
 *.pdf
 .claude/
+*.zip
+open-in-v0/
