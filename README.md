@@ -237,6 +237,18 @@ covernow_v2/
 2. Add environment variables in Vercel dashboard
 3. Deploy automatically on push to main branch
 
+### Railway
+
+1. Connect your GitHub repository to Railway
+2. Set the following environment variables in Railway dashboard:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   OPENROUTER_API_KEY=your_openrouter_api_key
+   TAVILY_API_KEY=your_tavily_api_key
+   ```
+3. Deploy automatically on push to main branch
+
 ### Environment Variables for Production
 
 Ensure all required environment variables are set:

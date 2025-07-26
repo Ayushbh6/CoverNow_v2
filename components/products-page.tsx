@@ -136,12 +136,12 @@ export default function ProductsPage() {
         <BeamsBackground intensity="strong" className="bg-gray-50 dark:bg-gray-800 transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <div className="text-center space-y-6">
-              <h1 className="text-5xl lg:text-6xl font-bold text-slate-500 dark:text-white leading-tight transition-colors">
+              <h1 className="text-5xl lg:text-6xl italic text-slate-500 dark:text-white leading-tight transition-colors">
                 All Your Insurance Needs, One Simple Platform
               </h1>
               <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto transition-colors">
                 Comprehensive coverage options designed for modern India. From health to travel, we've got you covered
-                with AI-powered recommendations.
+                with our specialised recommendations.
               </p>
             </div>
           </div>

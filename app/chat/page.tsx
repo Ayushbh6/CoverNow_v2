@@ -1164,6 +1164,10 @@ export default function ChatPage() {
                             showLifeInsuranceRecommendations: {
                               pending: 'Aria is analyzing your insurance needs...',
                               completed: '✓ Insurance recommendations ready'
+                            },
+                            calculator: {
+                              pending: 'Aria is calculating...',
+                              completed: '✓ Calculation completed'
                             }
                           };
 

@@ -133,12 +133,10 @@ export default function LandingPage() {
         <BeamsBackground intensity="strong" className="bg-gray-50 dark:bg-gray-800 transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
             <div className="text-center space-y-8">
-              <h1 className="text-6xl lg:text-7xl font-bold text-slate-700 dark:text-white leading-tight transition-colors">
-                AI Powered Insurance
+              <h1 className="text-6xl lg:text-7xl italic text-slate-700 dark:text-white leading-tight transition-colors">
+                Insurance Solutions
                 <br />
-                Solutions for Modern
-                <br />
-                India
+                for Modern India
               </h1>
               <h2 className="text-2xl lg:text-3xl font-semibold text-gray-700 dark:text-gray-300 transition-colors">
                 Simple, effective, easy insurance solutions.
