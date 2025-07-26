@@ -813,10 +813,8 @@ export default function ChatPage() {
                               </div>
                             )}
                             {isLoading && messages[messages.length - 1].id === message.id && (
-                              <div className="mt-3 flex gap-1">
-                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                              <div className="mt-3">
+                                <div className="w-3 h-3 bg-[#22C55E] rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
                               </div>
                             )}
                           </div>
