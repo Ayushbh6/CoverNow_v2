@@ -72,6 +72,7 @@ export default function ChatPage() {
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false)
@@ -140,6 +141,12 @@ export default function ChatPage() {
   useEffect(() => {
     checkAuth()
     loadConversations()
+    
+    // Restore sidebar state from localStorage
+    const savedSidebarState = localStorage.getItem('sidebarCollapsed')
+    if (savedSidebarState !== null) {
+      setSidebarCollapsed(JSON.parse(savedSidebarState))
+    }
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -598,6 +605,12 @@ export default function ChatPage() {
     return conv.title || 'New conversation'
   }
 
+  const toggleSidebar = () => {
+    const newState = !sidebarCollapsed
+    setSidebarCollapsed(newState)
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
+  }
+
   const signOut = async () => {
     sessionStorage.removeItem('currentConversationId')
     await supabase.auth.signOut()
@@ -607,7 +620,7 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen bg-white dark:bg-[#1A1A1A] transition-colors">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-50 dark:bg-[#2D2D2D] border-r border-gray-200 dark:border-gray-800/30 flex flex-col shadow-sm">
+      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} bg-gray-50 dark:bg-[#2D2D2D] border-r border-gray-200 dark:border-gray-800/30 flex flex-col shadow-sm transition-all duration-300 ease-in-out overflow-hidden`}>
         {/* Header with new chat button and theme toggle */}
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -738,6 +751,20 @@ export default function ChatPage() {
 
       {/* Main chat area */}
       <div className="flex-1 flex flex-col bg-gray-50 dark:bg-[#1A1A1A] relative">
+        {/* Sidebar toggle button */}
+        <button
+          onClick={toggleSidebar}
+          className="absolute top-4 left-4 z-20 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-lg transition-all duration-150 hover:bg-gray-50 dark:hover:bg-gray-700"
+          title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+        >
+          <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {sidebarCollapsed ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            )}
+          </svg>
+        </button>
         {/* Subtle texture overlay for premium feel */}
         <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.02] pointer-events-none"
           style={{
@@ -748,7 +775,7 @@ export default function ChatPage() {
         {/* Messages area */}
         <div 
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto relative"
+          className={`flex-1 overflow-y-auto relative ${sidebarCollapsed ? 'pt-16' : 'pt-4'} transition-all duration-300`}
           onScroll={handleScroll}
         >
           {/* Extended conversation mode indicator */}
