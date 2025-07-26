@@ -60,9 +60,9 @@ export default function ProductsPage() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center">
+          <div className="flex items-center h-16">
+            {/* Logo - Left Section */}
+            <div className="flex items-center flex-shrink-0">
               <img
                 src="/covernow-logo-dark.png"
                 alt="CoverNow"
@@ -75,27 +75,29 @@ export default function ProductsPage() {
               />
             </div>
 
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <a href="/" className="text-gray-900 dark:text-gray-100 hover:text-green-500 transition-colors">
-                Home
-              </a>
-              <a href="/products" className="text-green-500 font-medium">
-                Products
-              </a>
-              <a
-                href="/#how-it-works"
-                className="text-gray-900 dark:text-gray-100 hover:text-green-500 transition-colors"
-              >
-                How It Works
-              </a>
-              <a href="/#about" className="text-gray-900 dark:text-gray-100 hover:text-green-500 transition-colors">
-                About Us
-              </a>
-            </nav>
+            {/* Navigation - Center Section */}
+            <div className="flex-1 flex justify-center">
+              <nav className="hidden md:flex items-center space-x-8">
+                <a href="/" className="text-gray-900 dark:text-gray-100 hover:text-green-500 transition-colors">
+                  Home
+                </a>
+                <a href="/products" className="text-green-500 font-medium">
+                  Products
+                </a>
+                <a
+                  href="/#how-it-works"
+                  className="text-gray-900 dark:text-gray-100 hover:text-green-500 transition-colors"
+                >
+                  How It Works
+                </a>
+                <a href="/#about" className="text-gray-900 dark:text-gray-100 hover:text-green-500 transition-colors">
+                  About Us
+                </a>
+              </nav>
+            </div>
 
-            {/* Auth & Theme Toggle */}
-            <div className="flex items-center space-x-4">
+            {/* Auth & Theme Toggle - Right Section */}
+            <div className="flex items-center space-x-4 flex-shrink-0">
               <ThemeToggle />
               {user ? (
                 <div className="flex items-center space-x-2">

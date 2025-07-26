@@ -171,7 +171,7 @@ export default function DeepResearchProgress({ query, phase = 'reconnaissance', 
   return (
     <div className="w-full max-w-4xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-xl border border-gray-800 p-6 mb-4">
+      <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-xl border border-gray-200 dark:border-gray-800 p-6 mb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
@@ -180,19 +180,19 @@ export default function DeepResearchProgress({ query, phase = 'reconnaissance', 
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Deep Research in Progress</h3>
-              <p className="text-sm text-gray-400 mt-1">{query}</p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Deep Research in Progress</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{query}</p>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-mono text-white">{formatTime(elapsedTime)}</div>
-            <div className="text-xs text-gray-500">Elapsed Time</div>
+            <div className="text-2xl font-mono text-gray-900 dark:text-white">{formatTime(elapsedTime)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Elapsed Time</div>
           </div>
         </div>
 
         {/* Progress Bar */}
         <div className="mt-4">
-          <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
               style={{ width: `${currentUpdate?.progress || 0}%` }}
@@ -209,21 +209,21 @@ export default function DeepResearchProgress({ query, phase = 'reconnaissance', 
 
       {/* Current Activity */}
       {currentUpdate && (
-        <div className="bg-[#2a2a2a] rounded-xl border border-gray-800 p-4 mb-4">
+        <div className="bg-white dark:bg-[#2a2a2a] rounded-xl border border-gray-200 dark:border-gray-800 p-4 mb-4">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 bg-gradient-to-br ${getPhaseColor(currentUpdate.phase)} rounded-lg flex items-center justify-center text-white`}>
               {getPhaseIcon(currentUpdate.phase)}
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-white capitalize">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white capitalize">
                   {currentUpdate.phase.replace(/([A-Z])/g, ' $1').trim()} Phase
                 </h4>
-                <span className="text-xs text-gray-500">{currentUpdate.insights} insights found</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{currentUpdate.insights} insights found</span>
               </div>
-              <p className="text-sm text-gray-400 mt-1">{currentUpdate.status}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{currentUpdate.status}</p>
               {currentUpdate.currentQuery && (
-                <p className="text-xs text-gray-500 mt-2 font-mono bg-gray-800/50 rounded px-2 py-1 inline-block">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-mono bg-gray-100 dark:bg-gray-800/50 rounded px-2 py-1 inline-block">
                   {currentUpdate.currentQuery}
                 </p>
               )}
@@ -233,8 +233,8 @@ export default function DeepResearchProgress({ query, phase = 'reconnaissance', 
       )}
 
       {/* Research Tree Visualization */}
-      <div className="bg-[#2a2a2a] rounded-xl border border-gray-800 p-6">
-        <h4 className="text-sm font-medium text-gray-400 mb-4">Research Path</h4>
+      <div className="bg-white dark:bg-[#2a2a2a] rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+        <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Research Path</h4>
         
         {/* Tree visualization would go here */}
         <div className="space-y-4">
@@ -242,29 +242,29 @@ export default function DeepResearchProgress({ query, phase = 'reconnaissance', 
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full" />
             <div className="flex-1">
-              <p className="text-sm text-white">{query}</p>
-              <p className="text-xs text-gray-500">Initial Query</p>
+              <p className="text-sm text-gray-900 dark:text-white">{query}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Initial Query</p>
             </div>
           </div>
 
           {/* Dynamic tree nodes based on phase */}
-          <div className="ml-6 border-l-2 border-gray-700 pl-6 space-y-3">
+          <div className="ml-6 border-l-2 border-gray-300 dark:border-gray-700 pl-6 space-y-3">
             {phase === 'reconnaissance' && (
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                <p className="text-xs text-gray-400">Performing reconnaissance search...</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Performing reconnaissance search...</p>
               </div>
             )}
             {(phase === 'level1' || phase === 'level2' || phase === 'synthesis') && (
               <>
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-green-500 rounded-full" />
-                  <p className="text-xs text-gray-300">Reconnaissance completed</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300">Reconnaissance completed</p>
                 </div>
                 {phase === 'level1' && (
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-                    <p className="text-xs text-gray-400">Conducting Level 1 informed searches...</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Conducting Level 1 informed searches...</p>
                   </div>
                 )}
               </>
@@ -273,12 +273,12 @@ export default function DeepResearchProgress({ query, phase = 'reconnaissance', 
               <>
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-green-500 rounded-full" />
-                  <p className="text-xs text-gray-300">Level 1 research completed</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300">Level 1 research completed</p>
                 </div>
                 {phase === 'level2' && (
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                    <p className="text-xs text-gray-400">Deep diving with Level 2 research...</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Deep diving with Level 2 research...</p>
                   </div>
                 )}
               </>
@@ -287,11 +287,11 @@ export default function DeepResearchProgress({ query, phase = 'reconnaissance', 
               <>
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-green-500 rounded-full" />
-                  <p className="text-xs text-gray-300">Level 2 research completed</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300">Level 2 research completed</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  <p className="text-xs text-gray-400">Synthesizing findings into comprehensive report...</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Synthesizing findings into comprehensive report...</p>
                 </div>
               </>
             )}
@@ -301,22 +301,22 @@ export default function DeepResearchProgress({ query, phase = 'reconnaissance', 
 
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-3 mt-4">
-        <div className="bg-[#2a2a2a] rounded-lg border border-gray-800 p-3 text-center">
-          <div className="text-2xl font-semibold text-white">{progressData?.insights ?? currentUpdate?.insights ?? 0}</div>
-          <div className="text-xs text-gray-500">Key Insights</div>
+        <div className="bg-white dark:bg-[#2a2a2a] rounded-lg border border-gray-200 dark:border-gray-800 p-3 text-center">
+          <div className="text-2xl font-semibold text-gray-900 dark:text-white">{progressData?.insights ?? currentUpdate?.insights ?? 0}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Key Insights</div>
         </div>
-        <div className="bg-[#2a2a2a] rounded-lg border border-gray-800 p-3 text-center">
-          <div className="text-2xl font-semibold text-white">
+        <div className="bg-white dark:bg-[#2a2a2a] rounded-lg border border-gray-200 dark:border-gray-800 p-3 text-center">
+          <div className="text-2xl font-semibold text-gray-900 dark:text-white">
             {progressData?.totalSearches ?? (currentUpdate?.insights !== undefined ? 
               (phase === 'reconnaissance' ? 1 : phase === 'level1' ? 4 : phase === 'level2' ? 7 : 7) : 0)}
           </div>
-          <div className="text-xs text-gray-500">Searches Completed</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Searches Completed</div>
         </div>
-        <div className="bg-[#2a2a2a] rounded-lg border border-gray-800 p-3 text-center">
-          <div className="text-2xl font-semibold text-white">
+        <div className="bg-white dark:bg-[#2a2a2a] rounded-lg border border-gray-200 dark:border-gray-800 p-3 text-center">
+          <div className="text-2xl font-semibold text-gray-900 dark:text-white">
             {elapsedTime}s
           </div>
-          <div className="text-xs text-gray-500">Time Elapsed</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Time Elapsed</div>
         </div>
       </div>
     </div>

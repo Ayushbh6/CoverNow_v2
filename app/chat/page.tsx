@@ -14,7 +14,7 @@ import SearchResults from '@/app/components/SearchResults'
 import DeepResearchProgress from '@/app/components/DeepResearchProgress'
 import LifeInsuranceForm from '@/app/components/LifeInsuranceForm'
 import LifeInsuranceRecommendations from '@/app/components/LifeInsuranceRecommendations'
-import BeamsBackground from '@/components/kokonutui/beams-background'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 interface Conversation {
   id: string
@@ -471,47 +471,53 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-900">
+    <div className="flex h-screen bg-white dark:bg-[#1A1A1A] transition-colors">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-950/90 backdrop-blur-sm border-r border-gray-800/50 flex flex-col">
-        {/* New chat button */}
-        <div className="p-4">
+      <div className="w-64 bg-gray-50 dark:bg-[#2D2D2D] border-r border-gray-200 dark:border-gray-800/30 flex flex-col shadow-sm">
+        {/* Header with new chat button and theme toggle */}
+        <div className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">CoverNow</h2>
+            <ThemeToggle />
+          </div>
           <button
             onClick={() => {
               setCurrentConversation(null)
               setChatMessages([])
               sessionStorage.removeItem('currentConversationId')
             }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-white hover:bg-[#22C55E]/10 rounded-lg transition-all duration-200 border border-transparent hover:border-[#22C55E]/20"
+            className="w-full flex items-center gap-2 px-4 py-3 bg-[#22C55E] text-white rounded-xl hover:bg-[#16A34A] transition-all duration-150 shadow-md hover:shadow-lg transform hover:scale-[1.02]"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span className="text-sm text-[#22C55E] font-medium">New chat</span>
+            <span className="text-sm font-semibold">New chat</span>
           </button>
         </div>
 
         {/* Navigation */}
         <div className="px-4 space-y-1">
-          <button className="w-full flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-white hover:bg-[#22C55E]/10 rounded-lg transition-all duration-200">
+          <button className="w-full flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-all duration-150">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <span className="text-sm">Chats</span>
+            <span className="text-sm font-medium">Chats</span>
           </button>
         </div>
 
         {/* Conversations list */}
         <div className="flex-1 overflow-y-auto mt-4">
           <div className="px-4 mb-2">
-            <h3 className="text-xs text-gray-500 uppercase">Recent</h3>
+            <h3 className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wide">Recent</h3>
           </div>
           <div className="space-y-1 px-2">
             {conversations.map((conv) => (
               <div
                 key={conv.id}
-                className={`group relative flex items-center gap-2 px-2 py-2 text-sm text-gray-300 hover:bg-[#22C55E]/10 rounded-lg cursor-pointer transition-all duration-200 ${
-                  currentConversation?.id === conv.id ? 'bg-[#22C55E]/10 border-l-2 border-[#22C55E]' : ''
+                className={`group relative flex items-center gap-2 px-3 py-2.5 text-sm rounded-xl cursor-pointer transition-all duration-150 ${
+                  currentConversation?.id === conv.id 
+                    ? 'bg-[#22C55E]/10 dark:bg-[#22C55E]/20 text-[#22C55E] dark:text-[#22C55E] font-medium shadow-sm' 
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
                 }`}
               >
                 {editingConversationId === conv.id ? (
@@ -521,7 +527,7 @@ export default function ChatPage() {
                     onChange={(e) => setEditingTitle(e.target.value)}
                     onBlur={() => renameConversation(conv.id)}
                     onKeyDown={(e) => e.key === 'Enter' && renameConversation(conv.id)}
-                    className="flex-1 bg-gray-800/50 backdrop-blur-sm text-white px-2 py-1 rounded text-sm border border-gray-700/50 focus:border-[#22C55E]/50 focus:outline-none"
+                    className="flex-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1 rounded-lg text-sm border border-gray-200 dark:border-gray-600 focus:border-[#22C55E] focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20"
                     autoFocus
                   />
                 ) : (
@@ -538,7 +544,7 @@ export default function ChatPage() {
                           setEditingConversationId(conv.id)
                           setEditingTitle(getConversationTitle(conv))
                         }}
-                        className="p-1 hover:bg-gray-700 rounded"
+                        className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-150"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -546,7 +552,7 @@ export default function ChatPage() {
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(conv.id)}
-                        className="p-1 hover:bg-gray-700 rounded"
+                        className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-150"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -556,18 +562,18 @@ export default function ChatPage() {
                   </>
                 )}
                 {showDeleteConfirm === conv.id && (
-                  <div className="absolute right-0 top-0 bg-gray-900 border border-gray-700 rounded-lg p-2 z-10">
-                    <p className="text-xs mb-2">Delete this chat?</p>
+                  <div className="absolute right-0 top-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 z-10 shadow-lg">
+                    <p className="text-xs mb-2 text-gray-700 dark:text-gray-300 font-medium">Delete this chat?</p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => deleteConversation(conv.id)}
-                        className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                        className="px-3 py-1.5 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 transition-colors duration-150 font-medium"
                       >
                         Delete
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(null)}
-                        className="px-2 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-600"
+                        className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white text-xs rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150 font-medium"
                       >
                         Cancel
                       </button>
@@ -580,25 +586,31 @@ export default function ChatPage() {
         </div>
 
         {/* User section */}
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700/50">
           <button
             onClick={signOut}
-            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-[#22C55E]/10 rounded-lg transition-all duration-200"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-xl transition-all duration-150"
           >
-            <div className="w-8 h-8 bg-[#22C55E] rounded-full flex items-center justify-center shadow-lg shadow-[#22C55E]/20">
-              <span className="text-xs font-medium">{user?.email?.[0].toUpperCase()}</span>
+            <div className="w-9 h-9 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-full flex items-center justify-center shadow-md">
+              <span className="text-xs font-semibold text-white">{user?.email?.[0].toUpperCase()}</span>
             </div>
             <div className="flex-1 text-left">
-              <div className="font-medium">{user?.user_metadata?.first_name} {user?.user_metadata?.last_name}</div>
-              <div className="text-xs text-gray-500">Sign out</div>
+              <div className="font-semibold text-gray-800 dark:text-gray-200">{user?.user_metadata?.first_name} {user?.user_metadata?.last_name}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Sign out</div>
             </div>
           </button>
         </div>
       </div>
 
       {/* Main chat area */}
-      <BeamsBackground intensity="strong" className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-800">
-
+      <div className="flex-1 flex flex-col bg-gray-50 dark:bg-[#1A1A1A] relative">
+        {/* Subtle texture overlay for premium feel */}
+        <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.02] pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+        
         {/* Messages area */}
         <div 
           ref={messagesContainerRef}
@@ -607,8 +619,8 @@ export default function ChatPage() {
         >
           {/* Extended conversation mode indicator */}
           {currentConversation && currentConversation.token_count >= 200000 && rollingModeAcknowledged && (
-            <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800/50 px-4 py-2">
-              <div className="text-xs text-[#22C55E] flex items-center gap-1">
+            <div className="sticky top-0 z-10 bg-amber-50 dark:bg-amber-900/20 backdrop-blur-sm border-b border-amber-200 dark:border-amber-800/50 px-4 py-2">
+              <div className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1 max-w-3xl mx-auto">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
@@ -617,12 +629,13 @@ export default function ChatPage() {
             </div>
           )}
           {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-gray-400">
+            <div className="h-full flex flex-col items-center justify-center">
               <div className="w-20 h-20 mb-8 relative">
-                {/* Smooth round orb */}
-                <div className="w-full h-full bg-[#22C55E] rounded-full animate-pulse shadow-2xl shadow-[#22C55E]/70" style={{ filter: 'brightness(1.3) saturate(1.2)', boxShadow: '0 0 40px #22C55E, 0 0 80px #22C55E40' }}></div>
+                {/* Premium emerald circle with subtle shadow */}
+                <div className="w-full h-full bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-full shadow-xl transform transition-transform duration-300 hover:scale-105"></div>
+                <div className="absolute inset-0 bg-white/20 rounded-full blur-xl"></div>
               </div>
-              <h2 className="text-3xl font-light mb-2">
+              <h2 className="text-3xl font-semibold text-gray-800 dark:text-gray-100 mb-2">
                 {user?.user_metadata?.first_name 
                   ? `Hi ${user.user_metadata.first_name}! Say Hi to Aria` 
                   : "Hi! Say Hi to Aria"}
@@ -661,22 +674,22 @@ export default function ChatPage() {
                     {message.role === 'assistant' ? (
                       <>
                         <div className={`flex gap-3 ${hasWebSearch || hasLifeInsuranceRecommendations ? 'max-w-3xl mx-auto px-4' : ''}`}>
-                          <div className="w-8 h-8 bg-[#22C55E]/20 border border-[#22C55E]/30 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-bold text-[#22C55E]">AI</span>
+                          <div className="w-9 h-9 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                            <span className="text-xs font-bold text-white">AI</span>
                           </div>
                           <div className="flex-1">
                             {/* Only render message content if it's NOT showing deep research final results or life insurance recommendations */}
                             {!(hasDeepResearch && message.toolInvocations?.some(inv => 
                               inv.toolName === 'deepResearchSynthesize' && 'result' in inv && inv.result?.success
                             )) && !hasLifeInsuranceRecommendations && message.content && (
-                              <div className="text-white prose prose-invert max-w-none
-                                prose-p:leading-relaxed prose-pre:bg-gray-800/50 prose-pre:border prose-pre:border-gray-700/50
-                                prose-code:text-[#22C55E] prose-code:bg-gray-800/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-                                prose-strong:text-[#22C55E] prose-em:text-[#22C55E]/80
-                                prose-headings:text-[#22C55E] prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
+                              <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/30 text-gray-800 dark:text-gray-100 prose prose-gray dark:prose-invert max-w-none
+                                prose-p:leading-relaxed prose-pre:bg-gray-50 dark:prose-pre:bg-gray-900/50 prose-pre:border prose-pre:border-gray-200 dark:prose-pre:border-gray-700/50
+                                prose-code:text-[#22C55E] prose-code:bg-gray-100 dark:prose-code:bg-gray-800/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:font-medium
+                                prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-em:text-gray-700 dark:prose-em:text-gray-300
+                                prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
                                 prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-[#22C55E]
-                                prose-blockquote:border-[#22C55E] prose-blockquote:text-gray-300
-                                prose-a:text-[#22C55E] prose-a:underline hover:prose-a:text-[#22C55E]/80">
+                                prose-blockquote:border-[#22C55E] prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400
+                                prose-a:text-[#22C55E] prose-a:underline hover:prose-a:text-[#16A34A] prose-a:font-medium">
                                 <ReactMarkdown 
                                   remarkPlugins={[remarkGfm]}
                                   rehypePlugins={[rehypeHighlight]}
@@ -686,8 +699,10 @@ export default function ChatPage() {
                               </div>
                             )}
                             {isLoading && messages[messages.length - 1].id === message.id && (
-                              <div className="mt-2">
-                                <div className="w-2 h-2 bg-[#22C55E] rounded-full animate-pulse inline-block"></div>
+                              <div className="mt-3 flex gap-1">
+                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                               </div>
                             )}
                           </div>
@@ -718,11 +733,11 @@ export default function ChatPage() {
                               )
                             ) : (
                               <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                                   <div className="w-4 h-4 bg-[#22C55E]/20 rounded-full flex items-center justify-center">
                                     <div className="w-2 h-2 bg-[#22C55E] rounded-full animate-pulse" />
                                   </div>
-                                  <span>Aria is finding information...</span>
+                                  <span className="font-medium">Aria is finding information...</span>
                                 </div>
                               </div>
                             );
@@ -818,12 +833,12 @@ export default function ChatPage() {
                                   </div>
                                   
                                   {/* Show research stats */}
-                                  <div className="mt-6 p-4 bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-700/50">
+                                  <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700/50">
                                     <div className="flex items-center justify-between text-sm">
-                                      <span className="text-gray-400">
+                                      <span className="text-gray-600 dark:text-gray-400">
                                         Research completed in {toolInvocation.result.duration}s
                                       </span>
-                                      <span className="text-gray-400">
+                                      <span className="text-gray-600 dark:text-gray-400">
                                         {toolInvocation.result.totalSearches} searches • {toolInvocation.result.findings.keyInsights.length} insights
                                       </span>
                                     </div>
@@ -832,7 +847,7 @@ export default function ChatPage() {
                                   {/* Show sources */}
                                   {toolInvocation.result.findings.sources && toolInvocation.result.findings.sources.length > 0 && (
                                     <div className="mt-6">
-                                      <h3 className="text-lg font-semibold text-gray-300 mb-4">Sources</h3>
+                                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Sources</h3>
                                       <div className="relative">
                                         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
                                           {toolInvocation.result.findings.sources.map((source: any, idx: number) => (
@@ -841,7 +856,7 @@ export default function ChatPage() {
                                                 href={source.url} 
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
-                                                className="block p-4 bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-700/50 hover:border-emerald-500/30 hover:bg-gray-700/50 transition-all h-full hover:shadow-lg hover:shadow-emerald-500/10"
+                                                className="block p-4 bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700/50 hover:border-emerald-500/50 dark:hover:border-emerald-500/30 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all h-full hover:shadow-lg hover:shadow-emerald-500/10 shadow-sm"
                                               >
                                                 <div className="flex items-start justify-between mb-2">
                                                   <div className="flex items-center gap-2 flex-1">
@@ -851,11 +866,11 @@ export default function ChatPage() {
                                                       className="w-4 h-4 flex-shrink-0"
                                                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                                                     />
-                                                    <p className="text-xs text-gray-500 truncate">
+                                                    <p className="text-xs text-gray-600 dark:text-gray-500 truncate">
                                                       {new URL(source.url).hostname}
                                                     </p>
                                                   </div>
-                                                  <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                                                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">
                                                     {Math.round(source.relevance * 100)}%
                                                   </span>
                                                 </div>
@@ -1066,8 +1081,8 @@ export default function ChatPage() {
                       </>
                     ) : (
                       <div className="max-w-[70%]">
-                        <div className="bg-[#22C55E]/20 backdrop-blur-sm border border-[#22C55E]/30 text-white px-4 py-2 rounded-2xl shadow-lg shadow-[#22C55E]/10">
-                          {message.content}
+                        <div className="bg-gradient-to-br from-[#22C55E] to-[#16A34A] text-white px-5 py-3 rounded-2xl shadow-md">
+                          <p className="font-medium">{message.content}</p>
                         </div>
                       </div>
                     )}
@@ -1087,7 +1102,7 @@ export default function ChatPage() {
                   setIsUserScrolling(false)
                   scrollToBottom()
                 }}
-                className="bg-gray-800/90 backdrop-blur-sm border border-gray-700/50 rounded-full p-3 text-white hover:bg-gray-700/90 hover:border-[#22C55E]/50 transition-all duration-200 shadow-lg hover:shadow-[#22C55E]/20"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full p-3 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-[#22C55E] dark:hover:border-[#22C55E] transition-all duration-150 shadow-lg hover:shadow-xl"
                 title="Scroll to bottom"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1099,15 +1114,15 @@ export default function ChatPage() {
         </div>
 
         {/* Input area */}
-        <div className="border-t border-gray-800 p-4">
+        <div className="border-t border-gray-200 dark:border-gray-800/30 p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
           <form onSubmit={handleFormSubmit} className="max-w-3xl mx-auto">
-            <div className="relative flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl px-4 py-3 shadow-lg shadow-[#22C55E]/5">
+            <div className="relative flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 shadow-md hover:shadow-lg transition-shadow duration-150">
               {/* Mic button */}
               <button
                 type="button"
                 onClick={() => setIsMicOn(!isMicOn)}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  isMicOn ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg shadow-red-500/20' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                className={`p-2 rounded-xl transition-all duration-150 ${
+                  isMicOn ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1124,7 +1139,7 @@ export default function ChatPage() {
                 placeholder={currentConversation?.token_count && currentConversation.token_count >= 200000 
                   ? "Context limit reached. Start a new chat to continue." 
                   : "Message Aria..."}
-                className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none"
+                className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none text-[15px]"
                 disabled={isLoading || (!!currentConversation?.token_count && currentConversation.token_count >= 200000 && !rollingModeAcknowledged)}
               />
 
@@ -1132,10 +1147,10 @@ export default function ChatPage() {
               <button
                 type="submit"
                 disabled={isLoading || !input.trim() || (!!currentConversation?.token_count && currentConversation.token_count >= 200000 && !rollingModeAcknowledged)}
-                className={`p-2 rounded-lg transition-all duration-200 ${
+                className={`p-2 rounded-xl transition-all duration-150 transform ${
                   input.trim() && !isLoading && (!currentConversation || !currentConversation.token_count || currentConversation.token_count < 200000 || rollingModeAcknowledged)
-                    ? 'bg-[#22C55E] text-white hover:bg-[#16A34A] shadow-lg shadow-[#22C55E]/20'
-                    : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+                    ? 'bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white hover:shadow-md active:scale-95'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1143,28 +1158,28 @@ export default function ChatPage() {
                 </svg>
               </button>
             </div>
-            <p className="text-xs text-gray-500 text-center mt-2">
-              AI can make mistakes. Please double-check responses.
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3">
+              Aria can make mistakes. Please double-check responses.
             </p>
           </form>
         </div>
 
         {/* Token Limit Modal */}
         {showTokenLimitModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900/95 backdrop-blur-xl border border-gray-800/50 rounded-lg p-6 max-w-md w-full shadow-2xl shadow-black/50">
+        <div className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-md w-full shadow-2xl transform transition-all">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
+                  <svg className="w-7 h-7 text-amber-600 dark:text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-white">Conversation Limit Reached</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Conversation Limit Reached</h3>
               </div>
               <button
                 onClick={() => setShowTokenLimitModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1172,12 +1187,11 @@ export default function ChatPage() {
               </button>
             </div>
             
-            <p className="text-gray-300 mb-6">
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
               You've reached the conversation limit. For best results, start a new chat.
               <br />
-              <span className="text-sm">
-                You can also continue here 
-                <span className="text-gray-400"> (quality might suffer)</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                You can also continue here (quality might suffer)
               </span>
             </p>
             
@@ -1190,7 +1204,7 @@ export default function ChatPage() {
                   setRollingModeAcknowledged(false)
                   sessionStorage.removeItem('currentConversationId')
                 }}
-                className="flex-1 bg-[#22C55E] text-white py-2 px-4 rounded-lg hover:bg-[#16A34A] transition-all duration-200 font-medium shadow-lg shadow-[#22C55E]/20"
+                className="flex-1 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white py-2.5 px-4 rounded-xl hover:shadow-lg transition-all duration-150 font-semibold transform hover:scale-[1.02]"
               >
                 Start New Chat
               </button>
@@ -1199,7 +1213,7 @@ export default function ChatPage() {
                   setRollingModeAcknowledged(true)
                   setShowTokenLimitModal(false)
                 }}
-                className="flex-1 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 text-white py-2 px-4 rounded-lg hover:bg-gray-700/50 transition-all duration-200 font-medium"
+                className="flex-1 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 py-2.5 px-4 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 font-medium"
               >
                 Continue Anyway
               </button>
@@ -1207,7 +1221,7 @@ export default function ChatPage() {
           </div>
         </div>
       )}
-    </BeamsBackground>
+      </div>
     </div>
   )
 }

@@ -48,14 +48,14 @@ export default function SearchResults({ query, results, answer }: SearchResultsP
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <h3 className="text-sm font-medium text-gray-400">Information found</h3>
+          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Information found</h3>
         </div>
       </div>
 
       {/* AI Answer if available */}
       {answer && (
         <div className="mb-4 max-w-3xl mx-auto px-4">
-          <div className="p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-gray-800">
+          <div className="p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-gray-200 dark:border-gray-800">
             <div className="flex items-start gap-2 mb-2">
               <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                 <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -63,8 +63,8 @@ export default function SearchResults({ query, results, answer }: SearchResultsP
                 </svg>
               </div>
               <div className="flex-1">
-                <h4 className="text-sm font-medium text-white mb-1">Quick Answer</h4>
-                <p className="text-sm text-gray-300">{answer}</p>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Quick Answer</h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{answer}</p>
               </div>
             </div>
           </div>
@@ -79,7 +79,7 @@ export default function SearchResults({ query, results, answer }: SearchResultsP
               key={index}
               className="flex-shrink-0 w-80 group"
             >
-              <div className="h-full bg-[#2a2a2a] rounded-xl border border-gray-800 hover:border-gray-700 transition-all duration-200 hover:shadow-lg hover:shadow-black/20">
+              <div className="h-full bg-white dark:bg-[#2a2a2a] rounded-xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-200 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/20">
                 {/* Image if available */}
                 {result.images && result.images[0] && (
                   <div className="relative h-40 overflow-hidden rounded-t-xl">
@@ -107,11 +107,11 @@ export default function SearchResults({ query, results, answer }: SearchResultsP
                         loading="lazy"
                       />
                     )}
-                    <span className="text-xs text-gray-500">{getDomain(result.url)}</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-500">{getDomain(result.url)}</span>
                     {result.publishedDate && (
                       <>
-                        <span className="text-xs text-gray-600">•</span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 dark:text-gray-600">•</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-500">
                           {new Date(result.publishedDate).toLocaleDateString()}
                         </span>
                       </>
@@ -119,12 +119,12 @@ export default function SearchResults({ query, results, answer }: SearchResultsP
                   </div>
 
                   {/* Title */}
-                  <h4 className="font-medium text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {result.title}
                   </h4>
 
                   {/* Content preview */}
-                  <p className="text-sm text-gray-400 mb-3 line-clamp-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-3">
                     {truncateContent(result.content, 120)}
                   </p>
 
@@ -134,7 +134,7 @@ export default function SearchResults({ query, results, answer }: SearchResultsP
                       href={result.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                      className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
                     >
                       <span>Visit site</span>
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,7 +144,7 @@ export default function SearchResults({ query, results, answer }: SearchResultsP
                     {result.score > 0 && (
                       <div className="flex items-center gap-1">
                         <div className="w-1 h-1 bg-green-400 rounded-full" />
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-600 dark:text-gray-500">
                           {(result.score * 100).toFixed(0)}% relevant
                         </span>
                       </div>
@@ -157,12 +157,12 @@ export default function SearchResults({ query, results, answer }: SearchResultsP
         </div>
 
         {/* Scroll indicators */}
-        <div className="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-[#212121] to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
-        <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-[#212121] to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-gray-50 dark:from-[#212121] to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-gray-50 dark:from-[#212121] to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
 
       {/* Results count */}
-      <div className="mt-3 text-xs text-gray-500 text-center max-w-3xl mx-auto px-4">
+      <div className="mt-3 text-xs text-gray-600 dark:text-gray-500 text-center max-w-3xl mx-auto px-4">
         Found {results.length} result{results.length !== 1 ? 's' : ''}
       </div>
     </div>

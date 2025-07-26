@@ -61,10 +61,10 @@ export default function LifeInsuranceRecommendations({
             </svg>
           </div>
           <div className="text-left">
-            <h3 className="text-3xl font-bold text-white tracking-tight mb-1">
+            <h3 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight mb-1">
               Premium Plans for {userData.first_name}
             </h3>
-            <p className="text-white/60 font-medium">
+            <p className="text-gray-600 dark:text-white/60 font-medium">
               Curated recommendations based on your profile
             </p>
           </div>
