@@ -15,6 +15,7 @@ import DeepResearchProgress from '@/app/components/DeepResearchProgress'
 import LifeInsuranceForm from '@/app/components/LifeInsuranceForm'
 import LifeInsuranceRecommendations from '@/app/components/LifeInsuranceRecommendations'
 import { ThemeToggle } from '@/components/theme-toggle'
+import AudioVisualizer from '@/app/components/AudioVisualizer'
 
 interface Conversation {
   id: string
@@ -63,10 +64,15 @@ export default function ChatPage() {
   const [user, setUser] = useState<User | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
-  const [isMicOn, setIsMicOn] = useState(false)
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  
+  // Audio recording state
+  const [isRecording, setIsRecording] = useState(false)
+  const [audioAnalyser, setAudioAnalyser] = useState<AnalyserNode | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
 
   const [showTokenLimitModal, setShowTokenLimitModal] = useState(false)
   const [rollingModeAcknowledged, setRollingModeAcknowledged] = useState(false)
@@ -348,6 +354,114 @@ export default function ChatPage() {
     
     return () => clearInterval(scrollInterval)
   }, [isLoading, shouldAutoScroll, isUserScrolling])
+
+  // Audio recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      
+      // Create audio context and analyser for visualization
+      const audioContext = new AudioContext()
+      const source = audioContext.createMediaStreamSource(stream)
+      const analyser = audioContext.createAnalyser()
+      analyser.fftSize = 256
+      source.connect(analyser)
+      setAudioAnalyser(analyser)
+      
+      // Create media recorder - try different formats
+      let mimeType = 'audio/webm;codecs=opus' // Default
+      
+      // Try to find the best supported format
+      const mimeTypes = [
+        'audio/mp4',
+        'audio/mpeg',
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus'
+      ]
+      
+      for (const type of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          mimeType = type
+          break
+        }
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType })
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+      
+      mediaRecorder.onstop = async () => {
+        const mimeType = mediaRecorder.mimeType || 'audio/webm'
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
+        await transcribeAudio(audioBlob)
+        
+        // Clean up
+        stream.getTracks().forEach(track => track.stop())
+        audioContext.close()
+      }
+      
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch (error) {
+      console.error('Error starting recording:', error)
+      alert('Could not access microphone. Please check your permissions.')
+    }
+  }
+  
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+      setAudioAnalyser(null)
+    }
+  }
+  
+  const transcribeAudio = async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData()
+      
+      // Determine file extension based on mime type
+      const mimeType = audioBlob.type
+      let extension = 'webm'
+      if (mimeType.includes('mp4')) extension = 'mp4'
+      else if (mimeType.includes('mpeg')) extension = 'mp3'
+      else if (mimeType.includes('ogg')) extension = 'ogg'
+      
+      formData.append('audio', audioBlob, `recording.${extension}`)
+      
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!response.ok) {
+        throw new Error('Transcription failed')
+      }
+      
+      const { text } = await response.json()
+      
+      // Set the transcribed text in the input field
+      handleInputChange({ target: { value: text } } as any)
+    } catch (error) {
+      console.error('Error transcribing audio:', error)
+      alert('Failed to transcribe audio. Please try again.')
+    }
+  }
+  
+  const handleMicClick = () => {
+    if (isRecording) {
+      stopRecording()
+    } else {
+      startRecording()
+    }
+  }
 
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -1120,9 +1234,9 @@ export default function ChatPage() {
               {/* Mic button */}
               <button
                 type="button"
-                onClick={() => setIsMicOn(!isMicOn)}
+                onClick={handleMicClick}
                 className={`p-2 rounded-xl transition-all duration-150 ${
-                  isMicOn ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                  isRecording ? 'bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-md animate-pulse' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1130,18 +1244,34 @@ export default function ChatPage() {
                 </svg>
               </button>
 
-              {/* Text input */}
-              <input
-                type="text"
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder={currentConversation?.token_count && currentConversation.token_count >= 200000 
-                  ? "Context limit reached. Start a new chat to continue." 
-                  : "Message Aria..."}
-                className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none text-[15px]"
-                disabled={isLoading || (!!currentConversation?.token_count && currentConversation.token_count >= 200000 && !rollingModeAcknowledged)}
-              />
+              {/* Audio Visualizer or Text input */}
+              {isRecording ? (
+                <div className="flex-1 flex items-center gap-3">
+                  <AudioVisualizer analyser={audioAnalyser} isRecording={isRecording} />
+                  <button
+                    type="button"
+                    onClick={stopRecording}
+                    className="p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-150"
+                    title="Cancel recording"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={input}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder={currentConversation?.token_count && currentConversation.token_count >= 200000 
+                    ? "Context limit reached. Start a new chat to continue." 
+                    : "Message Aria..."}
+                  className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none text-[15px]"
+                  disabled={isLoading || (!!currentConversation?.token_count && currentConversation.token_count >= 200000 && !rollingModeAcknowledged)}
+                />
+              )}
 
               {/* Send button */}
               <button
