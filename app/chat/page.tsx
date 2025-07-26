@@ -734,7 +734,7 @@ export default function ChatPage() {
           {/* Extended conversation mode indicator */}
           {currentConversation && currentConversation.token_count >= 200000 && rollingModeAcknowledged && (
             <div className="sticky top-0 z-10 bg-amber-50 dark:bg-amber-900/20 backdrop-blur-sm border-b border-amber-200 dark:border-amber-800/50 px-4 py-2">
-              <div className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1 max-w-3xl mx-auto">
+              <div className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1 max-w-5xl mx-auto">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
@@ -783,11 +783,11 @@ export default function ChatPage() {
                   <div
                     key={message.id}
                     data-message-role={message.role}
-                    className={`mb-6 ${!hasWebSearch && !hasLifeInsuranceRecommendations ? 'max-w-3xl mx-auto px-4' : ''} ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
+                    className={`mb-10 ${!hasWebSearch && !hasLifeInsuranceRecommendations ? 'max-w-5xl mx-auto px-6' : ''} ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
                   >
                     {message.role === 'assistant' ? (
                       <>
-                        <div className={`flex gap-3 ${hasWebSearch || hasLifeInsuranceRecommendations ? 'max-w-3xl mx-auto px-4' : ''}`}>
+                        <div className={`flex gap-4 ${hasWebSearch || hasLifeInsuranceRecommendations ? 'max-w-5xl mx-auto px-6' : ''}`}>
                           <div className="w-9 h-9 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
                             <span className="text-xs font-bold text-white">AI</span>
                           </div>
@@ -796,7 +796,7 @@ export default function ChatPage() {
                             {!(hasDeepResearch && message.toolInvocations?.some(inv => 
                               inv.toolName === 'deepResearchSynthesize' && 'result' in inv && inv.result?.success
                             )) && !hasLifeInsuranceRecommendations && message.content && (
-                              <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/30 text-gray-800 dark:text-gray-100 prose prose-gray dark:prose-invert max-w-none
+                              <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700/30 text-gray-800 dark:text-gray-100 prose prose-gray dark:prose-invert max-w-none
                                 prose-p:leading-relaxed prose-pre:bg-gray-50 dark:prose-pre:bg-gray-900/50 prose-pre:border prose-pre:border-gray-200 dark:prose-pre:border-gray-700/50
                                 prose-code:text-[#22C55E] prose-code:bg-gray-100 dark:prose-code:bg-gray-800/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:font-medium
                                 prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-em:text-gray-700 dark:prose-em:text-gray-300
@@ -837,7 +837,7 @@ export default function ChatPage() {
                                   />
                                 </div>
                               ) : (
-                                <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                <div key={toolCallId} className="mt-2 max-w-5xl mx-auto px-6">
                                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                                     <p className="text-sm text-red-400">
                                       Search failed: {toolInvocation.result?.error || 'Unknown error'}
@@ -846,7 +846,7 @@ export default function ChatPage() {
                                 </div>
                               )
                             ) : (
-                              <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                              <div key={toolCallId} className="mt-2 max-w-5xl mx-auto px-6">
                                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                                   <div className="w-4 h-4 bg-[#22C55E]/20 rounded-full flex items-center justify-center">
                                     <div className="w-2 h-2 bg-[#22C55E] rounded-full animate-pulse" />
@@ -867,7 +867,7 @@ export default function ChatPage() {
                             return 'result' in toolInvocation ? (
                               toolInvocation.result?.success ? (
                                 !hasSynthesisComplete ? (
-                                  <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                  <div key={toolCallId} className="mt-2 max-w-5xl mx-auto px-6">
                                     <div className="flex items-center gap-2 text-sm text-gray-500">
                                       <div className="w-4 h-4 bg-[#22C55E]/20 rounded-full flex items-center justify-center">
                                         <div className="w-2 h-2 bg-[#22C55E] rounded-full animate-pulse" />
@@ -877,7 +877,7 @@ export default function ChatPage() {
                                   </div>
                                 ) : null
                               ) : (
-                                <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                <div key={toolCallId} className="mt-2 max-w-5xl mx-auto px-6">
                                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                                     <p className="text-sm text-red-400">
                                       Failed to start research: {toolInvocation.result?.error || 'Unknown error'}
@@ -901,7 +901,7 @@ export default function ChatPage() {
                           if (toolInvocation.toolName === 'deepResearchLevel1' || toolInvocation.toolName === 'deepResearchLevel2') {
                             return 'result' in toolInvocation ? (
                               toolInvocation.result?.success ? null : (
-                                <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                <div key={toolCallId} className="mt-2 max-w-5xl mx-auto px-6">
                                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                                     <p className="text-sm text-red-400">
                                       Research phase failed: {toolInvocation.result?.error || 'Unknown error'}
@@ -1000,7 +1000,7 @@ export default function ChatPage() {
                                   )}
                                 </div>
                               ) : (
-                                <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                <div key={toolCallId} className="mt-2 max-w-5xl mx-auto px-6">
                                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                                     <p className="text-sm text-red-400">
                                       Deep research failed: {toolInvocation.result?.error || 'Unknown error'}
@@ -1068,7 +1068,7 @@ export default function ChatPage() {
                                   />
                                 </div>
                               ) : (
-                                <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                                <div key={toolCallId} className="mt-2 max-w-5xl mx-auto px-6">
                                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                                     <p className="text-sm text-red-400">
                                       Failed to process insurance request: {toolInvocation.result?.error || 'Unknown error'}
@@ -1077,7 +1077,7 @@ export default function ChatPage() {
                                 </div>
                               )
                             ) : (
-                              <div key={toolCallId} className="mt-2 max-w-3xl mx-auto px-4">
+                              <div key={toolCallId} className="mt-2 max-w-5xl mx-auto px-6">
                                 <div className="flex items-center gap-2 text-sm text-gray-500">
                                   <div className="w-4 h-4 bg-[#22C55E]/20 rounded-full flex items-center justify-center">
                                     <div className="w-2 h-2 bg-[#22C55E] rounded-full animate-pulse" />
@@ -1169,7 +1169,7 @@ export default function ChatPage() {
                           }
 
                           return (
-                            <div key={toolCallId} className="max-w-3xl mx-auto px-4">
+                            <div key={toolCallId} className="max-w-5xl mx-auto px-6">
                               <div className={`mt-2 flex items-center gap-2 text-sm transition-opacity duration-300 ${
                                 'result' in toolInvocation ? 'text-green-500' : 'text-gray-500'
                               }`}>
@@ -1194,9 +1194,9 @@ export default function ChatPage() {
                         })}
                       </>
                     ) : (
-                      <div className="max-w-[70%]">
-                        <div className="bg-gradient-to-br from-[#22C55E] to-[#16A34A] text-white px-5 py-3 rounded-2xl shadow-md">
-                          <p className="font-medium">{message.content}</p>
+                      <div className="max-w-[75%]">
+                        <div className="bg-gradient-to-br from-[#22C55E] to-[#16A34A] text-white px-6 py-4 rounded-2xl shadow-md">
+                          <p className="font-medium leading-relaxed">{message.content}</p>
                         </div>
                       </div>
                     )}
@@ -1228,8 +1228,8 @@ export default function ChatPage() {
         </div>
 
         {/* Input area */}
-        <div className="border-t border-gray-200 dark:border-gray-800/30 p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-          <form onSubmit={handleFormSubmit} className="max-w-3xl mx-auto">
+        <div className="border-t border-gray-200 dark:border-gray-800/30 p-6 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+          <form onSubmit={handleFormSubmit} className="max-w-5xl mx-auto">
             <div className="relative flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 shadow-md hover:shadow-lg transition-shadow duration-150">
               {/* Mic button */}
               <button
