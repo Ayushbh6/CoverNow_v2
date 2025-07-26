@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: 'https://openrouter.ai/api/v1'
 })
 
 export async function POST(request: NextRequest) {
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Use the exact syntax from OpenAI documentation
     const transcription = await openai.audio.transcriptions.create({
       file: audioFile,
-      model: 'gpt-4o-transcribe',
+      model: 'openai/whisper-1',
       response_format: 'json'
     })
 

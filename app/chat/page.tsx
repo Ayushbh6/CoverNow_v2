@@ -505,6 +505,17 @@ export default function ChatPage() {
 
       if (msgError) throw msgError
 
+      // Add optimistic assistant message to show loading state immediately
+      const tempAssistantMessage = {
+        id: `temp-${Date.now()}`,
+        role: 'assistant' as const,
+        content: '',
+        createdAt: new Date()
+      }
+      
+      // Add the placeholder assistant message
+      setChatMessages(prev => [...prev, tempAssistantMessage])
+
       // Check if we have form data to include
       const formData = (window as any).__tempFormData;
       if (formData) {
@@ -812,7 +823,8 @@ export default function ChatPage() {
                                 </ReactMarkdown>
                               </div>
                             )}
-                            {isLoading && messages[messages.length - 1].id === message.id && (
+                            {((isLoading && messages[messages.length - 1].id === message.id) || 
+                              (message.role === 'assistant' && message.content === '')) && (
                               <div className="mt-3">
                                 <div className="w-3 h-3 bg-[#22C55E] rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
                               </div>
