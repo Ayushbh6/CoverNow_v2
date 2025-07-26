@@ -41,11 +41,30 @@ export const updateUserProfileSchema = jsonSchema({
     city: {
       type: 'string',
       description: "User's city of residence"
+    },
+    smokingStatus: {
+      type: 'boolean',
+      description: "Whether the user smokes. True for smoker, false for non-smoker. Important for insurance premiums."
+    },
+    occupation: {
+      type: 'string',
+      description: "User's occupation/profession. Important for risk assessment in insurance."
+    },
+    coverageAmount: {
+      type: 'number',
+      minimum: 0,
+      description: "Desired life insurance coverage amount in INR (e.g., 7500000 for 75 lakhs). Do not include currency symbols or commas."
+    },
+    policyTerm: {
+      type: 'number',
+      minimum: 5,
+      maximum: 40,
+      description: "Desired insurance policy term in years (e.g., 10, 15, 20, 25, 30)."
     }
   },
   required: [],
   additionalProperties: false,
-  description: "Update user profile information excluding health issues"
+  description: "Update user profile information including insurance preferences (excluding health issues)"
 });
 
 export const manageUserIssuesSchema = jsonSchema({
@@ -74,7 +93,11 @@ const updateUserProfileZodSchema = z.object({
   gender: z.string().optional(),
   isMarried: z.boolean().optional(),
   annualIncome: z.number().min(0).optional(),
-  city: z.string().optional()
+  city: z.string().optional(),
+  smokingStatus: z.boolean().optional(),
+  occupation: z.string().optional(),
+  coverageAmount: z.number().min(0).optional(),
+  policyTerm: z.number().min(5).max(40).optional()
 });
 
 const manageUserIssuesZodSchema = z.object({
@@ -102,6 +125,8 @@ type UserProfile = {
   issues: string[];
   annualIncome: number | null;
   city: string | null;
+  smokingStatus: boolean | null;
+  occupation: string | null;
 };
 
 // Helper function to calculate age from date of birth
@@ -135,7 +160,7 @@ export const getUserProfileTool = tool({
       // Get user profile with automatic RLS filtering
       const { data: profile, error } = await supabase
         .from('user_profile')
-        .select('first_name, last_name, age, dob, gender, is_married, has_issues, issues, annual_income, city')
+        .select('first_name, last_name, age, dob, gender, is_married, has_issues, issues, annual_income, city, smoking_status, occupation')
         .eq('user_id', user.id)
         .single();
 
@@ -160,7 +185,9 @@ export const getUserProfileTool = tool({
         hasIssues: profile.has_issues,
         issues: profile.issues || [],
         annualIncome: profile.annual_income,
-        city: profile.city
+        city: profile.city,
+        smokingStatus: profile.smoking_status,
+        occupation: profile.occupation
       };
 
       return { success: true, data: userProfile };
@@ -202,7 +229,7 @@ export const updateUserProfileTool = tool({
       // Get current profile to check existing values
       const { data: currentProfile, error: fetchError } = await supabase
         .from('user_profile')
-        .select('age, dob, gender, is_married, annual_income, city')
+        .select('age, dob, gender, is_married, annual_income, city, smoking_status, occupation, coverage_amount, policy_term')
         .eq('user_id', user.id)
         .single();
         
@@ -279,6 +306,42 @@ export const updateUserProfileTool = tool({
         });
       }
       
+      if (validatedParams.smokingStatus !== undefined && currentProfile.smoking_status !== null) {
+        fieldsNeedingConfirmation.push({
+          field: 'smokingStatus',
+          currentValue: currentProfile.smoking_status ? 'smoker' : 'non-smoker',
+          newValue: validatedParams.smokingStatus ? 'smoker' : 'non-smoker',
+          displayName: 'smoking status'
+        });
+      }
+      
+      if (validatedParams.occupation !== undefined && currentProfile.occupation !== null) {
+        fieldsNeedingConfirmation.push({
+          field: 'occupation',
+          currentValue: currentProfile.occupation,
+          newValue: validatedParams.occupation,
+          displayName: 'occupation'
+        });
+      }
+      
+      if (validatedParams.coverageAmount !== undefined && currentProfile.coverage_amount !== null) {
+        fieldsNeedingConfirmation.push({
+          field: 'coverageAmount',
+          currentValue: currentProfile.coverage_amount,
+          newValue: validatedParams.coverageAmount,
+          displayName: 'coverage amount'
+        });
+      }
+      
+      if (validatedParams.policyTerm !== undefined && currentProfile.policy_term !== null) {
+        fieldsNeedingConfirmation.push({
+          field: 'policyTerm',
+          currentValue: currentProfile.policy_term,
+          newValue: validatedParams.policyTerm,
+          displayName: 'policy term'
+        });
+      }
+      
       // If fields need confirmation, store in conversations table and trigger confirmation flow
       if (fieldsNeedingConfirmation.length > 0) {
         // Get the most recent conversation for this user to store pending confirmation
@@ -344,7 +407,7 @@ function generateConfirmationMessage(fields: Array<{field: string, currentValue:
 // Helper function to perform the actual profile update
 async function performProfileUpdate(validatedParams: any, supabase: any, userId: string) {
   // Build update object with snake_case fields
-  const updateData: Record<string, string | number | boolean> = {};
+  const updateData: Record<string, any> = {};
   
   // Handle DOB and auto-calculate age
   if (validatedParams.dob) {
@@ -372,6 +435,10 @@ async function performProfileUpdate(validatedParams: any, supabase: any, userId:
   if (validatedParams.isMarried !== undefined) updateData.is_married = validatedParams.isMarried;
   if (validatedParams.annualIncome !== undefined) updateData.annual_income = validatedParams.annualIncome;
   if (validatedParams.city !== undefined) updateData.city = validatedParams.city;
+  if (validatedParams.smokingStatus !== undefined) updateData.smoking_status = validatedParams.smokingStatus;
+  if (validatedParams.occupation !== undefined) updateData.occupation = validatedParams.occupation;
+  if (validatedParams.coverageAmount !== undefined) updateData.coverage_amount = validatedParams.coverageAmount;
+  if (validatedParams.policyTerm !== undefined) updateData.policy_term = validatedParams.policyTerm;
   
   // Check if we have any fields to update after processing
   if (Object.keys(updateData).length === 0) {

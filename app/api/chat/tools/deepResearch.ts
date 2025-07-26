@@ -151,7 +151,6 @@ async function performSearch(
       throw new Error('Tavily API key not configured');
     }
 
-    console.log('[performSearch] Searching with Tavily:', { query, searchDepth, maxResults });
     const tvly = tavily({ apiKey });
     
     const response = await tvly.search(query, {
@@ -162,8 +161,6 @@ async function performSearch(
       include_raw_content: true,
       include_images: false
     });
-
-    console.log('[performSearch] Tavily returned', response.results?.length || 0, 'results');
     
     return response.results.map((result: any) => ({
       title: result.title,
@@ -173,7 +170,6 @@ async function performSearch(
       publishedDate: result.published_date
     }));
   } catch (error) {
-    console.error('[performSearch] Error:', error);
     throw error;
   }
 }
@@ -378,10 +374,7 @@ async function initializeAndReconnaissance(
   researchSessions.set(sessionId, session);
 
   try {
-    console.log('[DeepResearch] Starting reconnaissance for:', query);
-    
     const reconResults = await performSearch(query, 'basic', 5);
-    console.log('[DeepResearch] Reconnaissance found', reconResults.length, 'results');
     
     accumulator.reconnaissance = reconResults;
     accumulator.totalSearches += 1;
@@ -395,13 +388,11 @@ async function initializeAndReconnaissance(
       .join('\n\n');
 
     // Generate Level 1 queries based on reconnaissance
-    console.log('[DeepResearch] Generating Level 1 queries...');
     const level1Queries = await generateSearchQueries(
       query,
       reconContext,
       breadth
     );
-    console.log('[DeepResearch] Generated queries:', level1Queries);
 
     session.level1Queries = level1Queries;
     session.currentPhase = 'level1';
@@ -508,7 +499,6 @@ async function performLevel1Research(sessionId: string): Promise<DeepResearchPro
 
     return progress;
   } catch (error) {
-    console.error('[Level1Research] Error:', error);
     throw error;
   }
 }
@@ -587,7 +577,6 @@ async function performLevel2Research(sessionId: string): Promise<DeepResearchPro
 
     return progress;
   } catch (error) {
-    console.error('[Level2Research] Error:', error);
     throw error;
   }
 }
@@ -660,7 +649,6 @@ async function synthesizeResearch(sessionId: string): Promise<DeepResearchRespon
       researchPath
     };
   } catch (error) {
-    console.error('[SynthesizeResearch] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Synthesis failed';
     
     // Return partial results if available
@@ -700,14 +688,11 @@ export const deepResearchInitTool = tool({
       
       // Check for API key early
       if (!process.env.TAVILY_API_KEY) {
-        console.error('[deepResearchInit] TAVILY_API_KEY not configured');
         return {
           success: false,
           error: 'Tavily API key not configured. Please set TAVILY_API_KEY in environment variables.'
         };
       }
-      
-      console.log('[deepResearchInit] Starting deep research for:', validatedParams.query);
       
       const { sessionId, progress, reconContext } = await initializeAndReconnaissance(
         validatedParams.query,
@@ -723,7 +708,6 @@ export const deepResearchInitTool = tool({
       };
       
     } catch (error) {
-      console.error('[deepResearchInit] Error:', error);
       if (error instanceof z.ZodError) {
         return {
           success: false,
@@ -747,8 +731,6 @@ export const deepResearchLevel1Tool = tool({
     try {
       const validatedParams = deepResearchContinueZodSchema.parse(params);
       
-      console.log('[deepResearchLevel1] Continuing research for session:', validatedParams.sessionId);
-      
       const progress = await performLevel1Research(validatedParams.sessionId);
       
       return {
@@ -759,7 +741,6 @@ export const deepResearchLevel1Tool = tool({
       };
       
     } catch (error) {
-      console.error('[deepResearchLevel1] Error:', error);
       if (error instanceof z.ZodError) {
         return {
           success: false,
@@ -783,8 +764,6 @@ export const deepResearchLevel2Tool = tool({
     try {
       const validatedParams = deepResearchContinueZodSchema.parse(params);
       
-      console.log('[deepResearchLevel2] Continuing research for session:', validatedParams.sessionId);
-      
       const progress = await performLevel2Research(validatedParams.sessionId);
       
       return {
@@ -795,7 +774,6 @@ export const deepResearchLevel2Tool = tool({
       };
       
     } catch (error) {
-      console.error('[deepResearchLevel2] Error:', error);
       if (error instanceof z.ZodError) {
         return {
           success: false,
@@ -819,20 +797,11 @@ export const deepResearchSynthesizeTool = tool({
     try {
       const validatedParams = deepResearchContinueZodSchema.parse(params);
       
-      console.log('[deepResearchSynthesize] Synthesizing research for session:', validatedParams.sessionId);
-      
       const result = await synthesizeResearch(validatedParams.sessionId);
-      
-      console.log('[deepResearchSynthesize] Research completed:', { 
-        success: result.success, 
-        duration: result.duration,
-        searches: result.totalSearches 
-      });
       
       return result;
       
     } catch (error) {
-      console.error('[deepResearchSynthesize] Error:', error);
       if (error instanceof z.ZodError) {
         return {
           success: false,
