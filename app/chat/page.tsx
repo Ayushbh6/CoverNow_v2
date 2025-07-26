@@ -620,7 +620,7 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen bg-white dark:bg-[#1A1A1A] transition-colors">
       {/* Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} bg-gray-50 dark:bg-[#2D2D2D] border-r border-gray-200 dark:border-gray-800/30 flex flex-col shadow-sm transition-all duration-300 ease-in-out overflow-hidden`}>
+      <div className={`${sidebarCollapsed ? 'w-0' : 'w-64'} bg-gray-50 dark:bg-[#2D2D2D] border-r border-gray-200 dark:border-gray-800/30 flex flex-col shadow-sm transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0`}>
         {/* Header with new chat button and theme toggle */}
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -633,7 +633,7 @@ export default function ChatPage() {
               setChatMessages([])
               sessionStorage.removeItem('currentConversationId')
             }}
-            className="w-full flex items-center gap-2 px-4 py-3 bg-[#22C55E] text-white rounded-xl hover:bg-[#16A34A] transition-all duration-150 shadow-md hover:shadow-lg transform hover:scale-[1.02]"
+            className="w-full flex items-center gap-2 px-3.5 py-2.5 bg-[#22C55E] text-white rounded-xl hover:bg-[#16A34A] transition-all duration-150 shadow-md hover:shadow-lg transform hover:scale-[1.02]"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -661,7 +661,7 @@ export default function ChatPage() {
             {conversations.map((conv) => (
               <div
                 key={conv.id}
-                className={`group relative flex items-center gap-2 px-3 py-2.5 text-sm rounded-xl cursor-pointer transition-all duration-150 ${
+                className={`group relative flex items-center gap-2 px-3 py-2 text-sm rounded-xl cursor-pointer transition-all duration-150 min-w-0 ${
                   currentConversation?.id === conv.id 
                     ? 'bg-[#22C55E]/10 dark:bg-[#22C55E]/20 text-[#22C55E] dark:text-[#22C55E] font-medium shadow-sm' 
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
@@ -680,7 +680,7 @@ export default function ChatPage() {
                 ) : (
                   <>
                     <div
-                      className="flex-1 truncate"
+                      className="flex-1 truncate min-w-0"
                       onClick={() => selectConversation(conv)}
                     >
                       {getConversationTitle(conv)}
@@ -830,7 +830,7 @@ export default function ChatPage() {
                   <div
                     key={message.id}
                     data-message-role={message.role}
-                    className={`mb-10 ${!hasWebSearch && !hasLifeInsuranceRecommendations ? 'max-w-5xl mx-auto px-6' : ''} ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
+                    className={`mb-8 ${!hasWebSearch && !hasLifeInsuranceRecommendations ? 'max-w-5xl mx-auto px-6' : ''} ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
                   >
                     {message.role === 'assistant' ? (
                       <>
@@ -843,7 +843,7 @@ export default function ChatPage() {
                             {!(hasDeepResearch && message.toolInvocations?.some(inv => 
                               inv.toolName === 'deepResearchSynthesize' && 'result' in inv && inv.result?.success
                             )) && !hasLifeInsuranceRecommendations && message.content && (
-                              <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700/30 text-gray-800 dark:text-gray-100 prose prose-gray dark:prose-invert max-w-none
+                              <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700/30 text-gray-800 dark:text-gray-100 prose prose-sm prose-gray dark:prose-invert max-w-none
                                 prose-p:leading-relaxed prose-pre:bg-gray-50 dark:prose-pre:bg-gray-900/50 prose-pre:border prose-pre:border-gray-200 dark:prose-pre:border-gray-700/50
                                 prose-code:text-[#22C55E] prose-code:bg-gray-100 dark:prose-code:bg-gray-800/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:font-medium
                                 prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-em:text-gray-700 dark:prose-em:text-gray-300
@@ -1244,9 +1244,9 @@ export default function ChatPage() {
                         })}
                       </>
                     ) : (
-                      <div className="max-w-[75%]">
-                        <div className="bg-gradient-to-br from-[#22C55E] to-[#16A34A] text-white px-6 py-4 rounded-2xl shadow-md">
-                          <p className="font-medium leading-relaxed">{message.content}</p>
+                      <div className="max-w-[70%]">
+                        <div className="bg-gradient-to-br from-[#22C55E] to-[#16A34A] text-white px-5 py-3.5 rounded-2xl shadow-md">
+                          <p className="text-[15px] font-medium leading-relaxed">{message.content}</p>
                         </div>
                       </div>
                     )}
@@ -1295,7 +1295,7 @@ export default function ChatPage() {
         </div>
 
         {/* Input area */}
-        <div className="border-t border-gray-200 dark:border-gray-800/30 p-6 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+        <div className="border-t border-gray-200 dark:border-gray-800/30 p-5 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
           <form onSubmit={handleFormSubmit} className="max-w-5xl mx-auto">
             <div className="relative flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 shadow-md hover:shadow-lg transition-shadow duration-150">
               {/* Mic button */}
