@@ -15,7 +15,6 @@ export const collectLifeInsuranceInfoSchema = jsonSchema({
 export interface UserProfileData {
   first_name: string;
   last_name: string;
-  age?: number | null;
   dob?: string | null;
   gender?: string | null;
   is_married?: boolean | null;
@@ -52,7 +51,7 @@ function generateFormFields(userData: UserProfileData): FormFieldDefinition[] {
   const fields: FormFieldDefinition[] = [];
 
   // Database fields (optional, show if null/empty)
-  if (userData.age === null && userData.dob === null) {
+  if (userData.dob === null) {
     fields.push({
       fieldName: 'dob',
       fieldType: 'date',

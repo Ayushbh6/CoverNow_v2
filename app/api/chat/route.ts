@@ -53,12 +53,24 @@ export async function POST(req: NextRequest) {
     // Fetch user profile data to inject into system prompt
     const { data: userProfile, error: profileError } = await supabase
       .from('user_profile')
-      .select('first_name, last_name, age, dob, gender, is_married, has_issues, issues, annual_income, city, smoking_status, occupation')
+      .select('first_name, last_name, dob, gender, is_married, has_issues, issues, annual_income, city, smoking_status, occupation')
       .eq('user_id', user.id)
       .single();
 
     if (profileError && profileError.code !== 'PGRST116') {
       console.error('Error fetching user profile:', profileError);
+    }
+    
+    // Calculate age from DOB if available
+    let calculatedAge: number | null = null;
+    if (userProfile?.dob) {
+      const birthDate = new Date(userProfile.dob);
+      const today = new Date();
+      calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
     }
 
     // Check current token count for the conversation
@@ -112,7 +124,7 @@ export async function POST(req: NextRequest) {
 <user_profile>
 <first_name>${userProfile.first_name}</first_name>
 <last_name>${userProfile.last_name || 'Not provided'}</last_name>
-<age>${userProfile.age || 'Not provided'}</age>
+<age>${calculatedAge || 'Not provided'}</age>
 <dob>${userProfile.dob || 'Not provided'}</dob>
 <gender>${userProfile.gender || 'Not provided'}</gender>
 <is_married>${userProfile.is_married !== null ? (userProfile.is_married ? 'Yes' : 'No') : 'Not provided'}</is_married>
@@ -313,10 +325,10 @@ Call: updateUserProfile({city: "Mumbai"})
 Response: "Great! I've noted you're from Mumbai."
 
 User: "Actually I'm 30, not 28"
-Call: updateUserProfile({age: 30})
-Gets: {requiresConfirmation: true, autoConfirmationPrompt: "I see your age is 28. Update to 30?"}
-Ask: "I see your age is 28. Update to 30?"
-User: "Yes" → handleConfirmationResponse({confirmed: true})
+Ask: "I need your date of birth to update your age. What's your DOB? (YYYY-MM-DD)"
+User: "1994-05-15"
+Call: updateUserProfile({dob: "1994-05-15"})
+Response: "Perfect! I've updated your date of birth."
 </examples>
 
 <critical_rules>
@@ -398,8 +410,8 @@ confirmed=false: "No", "Nope", "Keep it", "Leave it", "Cancel", "Don't change"
 <example>
 After confirmation prompt, user says "Yes"
 Call: handleConfirmationResponse({confirmed: true})
-Response: {success: true, action: "updated", updatedFields: ["age"]}
-Action: "Perfect! I've updated your age to 30."
+Response: {success: true, action: "updated", updatedFields: ["dob"]}
+Action: "Perfect! I've updated your date of birth."
 
 User says "No" or "Cancel"
 Call: handleConfirmationResponse({confirmed: false})
@@ -635,13 +647,13 @@ When user asks about life insurance:
 2. DECIDE which path to take:
 
 PATH A - Direct to Recommendations (Most Common):
-✅ User has ALL 4 required fields: smoking_status, occupation, annual_income, AND age/dob
+✅ User has ALL 4 required fields: smoking_status, occupation, annual_income, AND dob
 → Call showLifeInsuranceRecommendations() directly
 → Smart defaults will be used for coverage amount (12x income) and policy term (age-based)
 Example: Returning user says "Show me life insurance options"
 
 PATH B - Collect Missing Required Info:
-❌ User missing ANY of the 4 required fields: smoking_status, occupation, annual_income, age/dob
+❌ User missing ANY of the 4 required fields: smoking_status, occupation, annual_income, dob
 → Call collectLifeInsuranceInfo() first
 → Form will collect ALL missing data (required + optional for better accuracy)
 → After form submission, call showLifeInsuranceRecommendations()
@@ -663,7 +675,7 @@ Example: "How does life insurance work?"
 <user_journey_examples>
 SCENARIO 1: Complete Profile User
 User: "I need life insurance"
-AI: Check profile → Has smoking_status, occupation, annual_income, and age → showLifeInsuranceRecommendations()
+AI: Check profile → Has smoking_status, occupation, annual_income, and dob → showLifeInsuranceRecommendations()
 Response: "Here are personalized life insurance recommendations based on your profile:"
 
 SCENARIO 2: New User with Incomplete Profile

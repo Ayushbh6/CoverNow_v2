@@ -14,12 +14,6 @@ export const getUserProfileSchema = jsonSchema({
 export const updateUserProfileSchema = jsonSchema({
   type: 'object',
   properties: {
-    age: {
-      type: 'number',
-      minimum: 0,
-      maximum: 150,
-      description: "User's age in years. This is calculated automatically if 'dob' is provided, so prefer 'dob'."
-    },
     dob: {
       type: 'string',
       pattern: '^\\d{4}-\\d{2}-\\d{2}$',
@@ -88,7 +82,6 @@ export const manageUserIssuesSchema = jsonSchema({
 
 // Zod schemas for internal validation
 const updateUserProfileZodSchema = z.object({
-  age: z.number().min(0).max(150).optional(),
   dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date of birth must be in YYYY-MM-DD format.").optional(),
   gender: z.string().optional(),
   isMarried: z.boolean().optional(),
@@ -117,7 +110,6 @@ const manageUserIssuesZodSchema = z.object({
 type UserProfile = {
   firstName: string;
   lastName: string;
-  age: number | null;
   dob: string | null;
   gender: string | null;
   isMarried: boolean | null;
@@ -128,20 +120,6 @@ type UserProfile = {
   smokingStatus: boolean | null;
   occupation: string | null;
 };
-
-// Helper function to calculate age from date of birth
-function calculateAge(dob: string): number {
-  const birthDate = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  
-  return age;
-}
 
 // Tool: Get user profile
 export const getUserProfileTool = tool({
@@ -160,7 +138,7 @@ export const getUserProfileTool = tool({
       // Get user profile with automatic RLS filtering
       const { data: profile, error } = await supabase
         .from('user_profile')
-        .select('first_name, last_name, age, dob, gender, is_married, has_issues, issues, annual_income, city, smoking_status, occupation')
+        .select('first_name, last_name, dob, gender, is_married, has_issues, issues, annual_income, city, smoking_status, occupation')
         .eq('user_id', user.id)
         .single();
 
@@ -174,11 +152,23 @@ export const getUserProfileTool = tool({
         throw error;
       }
 
+      // Calculate age from DOB if available
+      let calculatedAge: number | null = null;
+      if (profile.dob) {
+        const birthDate = new Date(profile.dob);
+        const today = new Date();
+        calculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          calculatedAge--;
+        }
+      }
+
       // Transform snake_case to camelCase and format response
-      const userProfile: UserProfile = {
+      const userProfile: UserProfile & { age: number | null } = {
         firstName: profile.first_name,
         lastName: profile.last_name,
-        age: profile.age,
+        age: calculatedAge,
         dob: profile.dob,
         gender: profile.gender,
         isMarried: profile.is_married,
@@ -229,7 +219,7 @@ export const updateUserProfileTool = tool({
       // Get current profile to check existing values
       const { data: currentProfile, error: fetchError } = await supabase
         .from('user_profile')
-        .select('age, dob, gender, is_married, annual_income, city, smoking_status, occupation, coverage_amount, policy_term')
+        .select('dob, gender, is_married, annual_income, city, smoking_status, occupation, coverage_amount, policy_term')
         .eq('user_id', user.id)
         .single();
         
@@ -252,15 +242,6 @@ export const updateUserProfileTool = tool({
       }> = [];
       
       // Check each field
-      if (validatedParams.age !== undefined && currentProfile.age !== null) {
-        fieldsNeedingConfirmation.push({
-          field: 'age',
-          currentValue: currentProfile.age,
-          newValue: validatedParams.age,
-          displayName: 'age'
-        });
-      }
-      
       if (validatedParams.dob !== undefined && currentProfile.dob !== null) {
         fieldsNeedingConfirmation.push({
           field: 'dob',
@@ -409,7 +390,7 @@ async function performProfileUpdate(validatedParams: any, supabase: any, userId:
   // Build update object with snake_case fields
   const updateData: Record<string, any> = {};
   
-  // Handle DOB and auto-calculate age
+  // Handle DOB
   if (validatedParams.dob) {
     // Validate date format and ensure it's in the past
     const dobDate = new Date(validatedParams.dob);
@@ -424,10 +405,6 @@ async function performProfileUpdate(validatedParams: any, supabase: any, userId:
     }
     
     updateData.dob = validatedParams.dob;
-    updateData.age = calculateAge(validatedParams.dob);
-  } else if (validatedParams.age !== undefined) {
-    // Only update age if DOB wasn't provided
-    updateData.age = validatedParams.age;
   }
   
   // Add other fields if provided

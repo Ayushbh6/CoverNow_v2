@@ -41,7 +41,7 @@ export default function LifeInsuranceRecommendations({
 
   // Calculate default term based on age (matching backend logic)
   const calculateDefaultTerm = (userData: any): number => {
-    const age = userData.age || (userData.dob ? new Date().getFullYear() - new Date(userData.dob).getFullYear() : 30);
+    const age = userData.dob ? new Date().getFullYear() - new Date(userData.dob).getFullYear() : 30;
     
     if (age <= 25) return 30;
     if (age <= 35) return 25;
@@ -105,7 +105,7 @@ export default function LifeInsuranceRecommendations({
           <div className="text-center">
             <p className="text-sm font-medium text-white/60 mb-3 tracking-wide">Your Age</p>
             <p className="text-2xl font-bold text-white tracking-tight">
-              {userData.age || (userData.dob ? new Date().getFullYear() - new Date(userData.dob).getFullYear() : 'Not provided')}
+              {userData.dob ? new Date().getFullYear() - new Date(userData.dob).getFullYear() : 'Not provided'}
             </p>
           </div>
           <div className="text-center">
@@ -247,7 +247,7 @@ export default function LifeInsuranceRecommendations({
                   <span className="px-2 py-1 bg-green-500/20 rounded text-xs text-green-400">
                     Save {calculateSavings(index)}% with annual payment
                   </span>
-                  {userData.age && userData.age < 30 && (
+                  {userData.dob && new Date().getFullYear() - new Date(userData.dob).getFullYear() < 30 && (
                     <span className="px-2 py-1 bg-blue-500/20 rounded text-xs text-blue-400">
                       Young age discount applied
                     </span>

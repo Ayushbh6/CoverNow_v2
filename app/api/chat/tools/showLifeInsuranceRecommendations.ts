@@ -56,9 +56,9 @@ function hasMinimumRequiredFields(data: any): { valid: boolean; missing: string[
     missing.push('annual income');
   }
   
-  // Required field 4: Age (either age field or date of birth)
-  if (!data.age && !data.dob) {
-    missing.push('age or date of birth');
+  // Required field 4: Date of birth
+  if (!data.dob) {
+    missing.push('date of birth');
   }
   
   return { valid: missing.length === 0, missing };
@@ -70,9 +70,12 @@ function calculatePremium(data: any): { monthly: number; annual: number; min?: n
   let basePremium = 5000; // Base annual premium
   
   // Age factor
-  if (data.age || data.dob) {
-    const age = data.age || (data.dob ? new Date().getFullYear() - new Date(data.dob).getFullYear() : 30);
+  if (data.dob) {
+    const age = new Date().getFullYear() - new Date(data.dob).getFullYear();
     basePremium += (age - 25) * 200; // Increase by 200 per year above 25
+  } else {
+    // Default age assumption if DOB not available
+    basePremium += (30 - 25) * 200;
   }
 
   // Smoking factor
@@ -104,7 +107,7 @@ function calculatePremium(data: any): { monthly: number; annual: number; min?: n
   }
 
   // If we have incomplete data, return a range
-  const hasCompleteData = data.age && data.annual_income && data.city && data.coverage_amount;
+  const hasCompleteData = data.dob && data.annual_income && data.city && data.coverage_amount;
   
   if (!hasCompleteData) {
     return {
@@ -139,7 +142,7 @@ function calculateSmartCoverageAmount(userData: any): number {
 
 // Helper function to calculate smart policy term based on age
 function calculateSmartPolicyTerm(userData: any): number {
-  const age = userData.age || (userData.dob ? new Date().getFullYear() - new Date(userData.dob).getFullYear() : 30);
+  const age = userData.dob ? new Date().getFullYear() - new Date(userData.dob).getFullYear() : 30;
   
   // Age-based term recommendations for retirement planning
   if (age <= 25) return 30; // Young professionals - longest term
@@ -236,7 +239,7 @@ function generateInsuranceProducts(userData: any): InsuranceProduct[] {
       features.push('Higher premium due to smoking');
     }
 
-    const hasCompleteData = userData.age && userData.annual_income && userData.city;
+    const hasCompleteData = userData.dob && userData.annual_income && userData.city;
 
     return {
       id: randomUUID(),
