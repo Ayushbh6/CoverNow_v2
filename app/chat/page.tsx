@@ -91,6 +91,31 @@ export default function ChatPage() {
   // Speech controls
   const speechControls = useSpeechControls()
   
+  // Shared function to determine if message content should be processed for TTS
+  // This ensures TTS and UI use the same visibility logic
+  const shouldProcessContentForTTS = (message: AiMessage): boolean => {
+    if (!message.content || message.role !== 'assistant') return false;
+    
+    // Check if this message has deep research that shows a component instead of text
+    const hasDeepResearchComplete = message.toolInvocations?.some(inv => 
+      inv.toolName === 'deepResearchSynthesize' && 'result' in inv && inv.result?.success
+    );
+    
+    // Check if this message has life insurance recommendations that show a component instead of text
+    const hasLifeInsuranceRecommendations = message.toolInvocations?.some(inv => 
+      inv.toolName === 'showLifeInsuranceRecommendations' && 
+      'result' in inv && 
+      inv.result?.status === 'ready'
+    );
+    
+    // Don't process for TTS if content is hidden by UI components
+    if (hasDeepResearchComplete || hasLifeInsuranceRecommendations) {
+      return false;
+    }
+    
+    return true;
+  };
+  
   const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages: setChatMessages, error, append, status } = useChat({
     api: '/api/chat',
     maxSteps: 15, // Match the server-side maxSteps
@@ -143,64 +168,89 @@ export default function ChatPage() {
     }
   }, [status])
   
-  // Helper function to extract complete sentences
-  function extractCompleteSentences(text: string): { complete: string[], remainder: string } {
-    const sentencePattern = /([.!?]+)(?:\s+|$)/g;
-    const matches = Array.from(text.matchAll(sentencePattern));
+  // Track text buffer for sentence extraction
+  const textBufferRef = useRef<string>('');
+  const processedSentencesRef = useRef<Set<string>>(new Set());
+  const lastProcessedPositionRef = useRef<number>(0);
+  const ttsSequenceRef = useRef<number>(0);
+  const pendingTTSRef = useRef<Map<number, { sentence: string; promise: Promise<void> }>>(new Map());
+  
+  // Generate TTS for a sentence with proper sequencing
+  const generateTTS = async (sentence: string, sequenceNumber: number) => {
+    if (processedSentencesRef.current.has(sentence)) return;
+    processedSentencesRef.current.add(sentence);
+    
+    const ttsPromise = (async (): Promise<void> => {
+      try {
+        // Wait for previous sequence to complete first
+        const previousSequence = sequenceNumber - 1;
+        if (pendingTTSRef.current.has(previousSequence)) {
+          await pendingTTSRef.current.get(previousSequence)?.promise;
+        }
+        
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: sentence })
+        });
+        
+        if (response.ok) {
+          const audioBlob = await response.blob();
+          
+          const base64Audio = await new Promise<string | null>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64 = reader.result?.toString().split(',')[1];
+              resolve(base64 || null);
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(audioBlob);
+          });
+          
+          if (base64Audio) {
+            speechControls.playAudio(base64Audio, sentence);
+          }
+        }
+      } catch (error) {
+        // Ignore errors but continue
+      } finally {
+        // Remove this sequence from pending
+        pendingTTSRef.current.delete(sequenceNumber);
+      }
+    })();
+    
+    // Store the promise so next sequence can wait for it
+    pendingTTSRef.current.set(sequenceNumber, { sentence, promise: ttsPromise });
+  };
+  
+  // Helper function to extract only NEW complete sentences from a specific position
+  function extractNewCompleteSentences(text: string, fromPosition: number): { newSentences: string[], newPosition: number } {
+    const textFromPosition = text.slice(fromPosition);
+    // Simple pattern: break on sentence endings (., !, ?) OR newlines
+    const sentencePattern = /([.!?]+)(?:\s+|$)|(\n)/g;
+    const matches = Array.from(textFromPosition.matchAll(sentencePattern));
     
     if (matches.length === 0) {
-      return { complete: [], remainder: text };
+      return { newSentences: [], newPosition: fromPosition };
     }
     
-    const complete: string[] = [];
+    const newSentences: string[] = [];
     let lastEnd = 0;
     
     for (const match of matches) {
       const sentenceEnd = match.index! + match[0].length;
-      const sentence = text.slice(lastEnd, sentenceEnd).trim();
+      const sentence = textFromPosition.slice(lastEnd, sentenceEnd).trim();
       if (sentence && sentence.length > 5) {
-        complete.push(sentence);
+        newSentences.push(sentence);
       }
       lastEnd = sentenceEnd;
     }
     
-    const remainder = text.slice(lastEnd).trim();
-    return { complete, remainder };
+    return { 
+      newSentences, 
+      newPosition: fromPosition + lastEnd 
+    };
   }
-  
-  // Track text buffer for sentence extraction
-  const textBufferRef = useRef<string>('');
-  const processedSentencesRef = useRef<Set<string>>(new Set());
-  
-  // Generate TTS for a sentence
-  const generateTTS = async (sentence: string) => {
-    if (processedSentencesRef.current.has(sentence)) return;
-    processedSentencesRef.current.add(sentence);
-    
-    try {
-      
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: sentence })
-      });
-      
-      if (response.ok) {
-        const audioBlob = await response.blob();
-        
-        // Convert blob to base64 for the existing playAudio function
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result?.toString().split(',')[1];
-          if (base64) {
-            speechControls.playAudio(base64, sentence);
-          }
-        };
-        reader.readAsDataURL(audioBlob);
-      }
-    } catch (error) {
-    }
-  };
   
   // Monitor streaming text and generate TTS
   useEffect(() => {
@@ -209,6 +259,9 @@ export default function ChatPage() {
       if (status === 'ready') {
         textBufferRef.current = '';
         processedSentencesRef.current.clear();
+        lastProcessedPositionRef.current = 0;
+        ttsSequenceRef.current = 0;
+        pendingTTSRef.current.clear();
       }
       return;
     }
@@ -217,17 +270,32 @@ export default function ChatPage() {
     const assistantMessages = messages.filter(m => m.role === 'assistant');
     const latestAssistant = assistantMessages[assistantMessages.length - 1];
     
-    if (latestAssistant?.content) {
-      // Update text buffer with new content
-      textBufferRef.current = latestAssistant.content;
+    // CRITICAL FIX: Only process for TTS if content will be visible to user
+    if (latestAssistant && shouldProcessContentForTTS(latestAssistant)) {
+      const newContent = latestAssistant.content;
       
-      // Extract complete sentences
-      const { complete } = extractCompleteSentences(textBufferRef.current);
-      
-      // Generate TTS for each complete sentence
-      complete.forEach(sentence => {
-        generateTTS(sentence);
-      });
+      // Only process if content has actually grown
+      if (newContent && newContent.length > textBufferRef.current.length) {
+        textBufferRef.current = newContent;
+        
+        // Extract only NEW complete sentences from our last position
+        const { newSentences, newPosition } = extractNewCompleteSentences(
+          textBufferRef.current, 
+          lastProcessedPositionRef.current
+        );
+        
+        // Update our position
+        lastProcessedPositionRef.current = newPosition;
+        
+        // Generate TTS for each new sentence in order
+        newSentences.forEach(sentence => {
+          generateTTS(sentence, ttsSequenceRef.current++);
+        });
+      }
+    } else if (latestAssistant && !shouldProcessContentForTTS(latestAssistant)) {
+      // Content will be hidden - reset TTS state to prevent processing
+      textBufferRef.current = '';
+      lastProcessedPositionRef.current = 0;
     }
   }, [messages, status, speechControls.speechEnabled])
 
@@ -899,44 +967,36 @@ export default function ChatPage() {
           ) : (
             <div className="py-8">
               {messages.map((message) => {
-                // Check if this message has web search results
+                // Check if this message has web search results (for styling only)
                 const hasWebSearch = message.role === 'assistant' && 
                   message.toolInvocations?.some(inv => inv.toolName === 'webSearchFast' && 'result' in inv && inv.result?.success);
 
-                // Check if this message has a deep research tool invocation
-                const hasDeepResearch = message.role === 'assistant' &&
+                // Use shared function to determine if content should be visible (same as TTS logic)
+                const shouldShowContent = shouldProcessContentForTTS(message);
+                
+                // Check specific component types for styling purposes
+                const hasSpecialComponent = message.role === 'assistant' && (
                   message.toolInvocations?.some(inv => 
-                    inv.toolName === 'deepResearchInit' || 
-                    inv.toolName === 'deepResearchLevel1' || 
-                    inv.toolName === 'deepResearchLevel2' || 
-                    inv.toolName === 'deepResearchSynthesize'
-                  );
-                  
-                // Check if this message has life insurance recommendations
-                const hasLifeInsuranceRecommendations = message.role === 'assistant' &&
-                  message.toolInvocations?.some(inv => 
-                    inv.toolName === 'showLifeInsuranceRecommendations' && 
-                    'result' in inv && 
-                    inv.result?.status === 'ready'
-                  );
+                    (inv.toolName === 'showLifeInsuranceRecommendations' && 'result' in inv && inv.result?.status === 'ready') ||
+                    (inv.toolName === 'deepResearchSynthesize' && 'result' in inv && inv.result?.success)
+                  )
+                );
 
                 return (
                   <div
                     key={message.id}
                     data-message-role={message.role}
-                    className={`mb-8 ${!hasWebSearch && !hasLifeInsuranceRecommendations ? 'max-w-5xl mx-auto px-6' : ''} ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
+                    className={`mb-8 ${!hasWebSearch && !hasSpecialComponent ? 'max-w-5xl mx-auto px-6' : ''} ${message.role === 'assistant' ? '' : 'flex justify-end'}`}
                   >
                     {message.role === 'assistant' ? (
                       <>
-                        <div className={`flex gap-4 ${hasWebSearch || hasLifeInsuranceRecommendations ? 'max-w-5xl mx-auto px-6' : ''}`}>
+                        <div className={`flex gap-4 ${hasWebSearch || hasSpecialComponent ? 'max-w-5xl mx-auto px-6' : ''}`}>
                           <div className="w-9 h-9 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
                             <span className="text-xs font-bold text-white">A</span>
                           </div>
                           <div className="flex-1">
-                            {/* Only render message content if it's NOT showing deep research final results or life insurance recommendations */}
-                            {!(hasDeepResearch && message.toolInvocations?.some(inv => 
-                              inv.toolName === 'deepResearchSynthesize' && 'result' in inv && inv.result?.success
-                            )) && !hasLifeInsuranceRecommendations && message.content && (
+                            {/* Only render message content if it should be visible (same logic as TTS) */}
+                            {shouldShowContent && (
                               <div className="bg-white dark:bg-gray-800/50 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700/30 text-gray-800 dark:text-gray-100 prose prose-sm prose-gray dark:prose-invert max-w-none
                                 prose-p:leading-relaxed prose-pre:bg-gray-50 dark:prose-pre:bg-gray-900/50 prose-pre:border prose-pre:border-gray-200 dark:prose-pre:border-gray-700/50
                                 prose-code:text-[#22C55E] prose-code:bg-gray-100 dark:prose-code:bg-gray-800/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:font-medium

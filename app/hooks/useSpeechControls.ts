@@ -204,6 +204,7 @@ export function useSpeechControls(): UseSpeechControlsReturn {
     setIsPaused(false);
     setCurrentSentence(null);
     setQueueLength(0);
+    isProcessingRef.current = false; // Fix: Reset processing flag so future audio can play
   }, []);
   
   return {
