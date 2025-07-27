@@ -16,6 +16,8 @@ import LifeInsuranceForm from '@/app/components/LifeInsuranceForm'
 import LifeInsuranceRecommendations from '@/app/components/LifeInsuranceRecommendations'
 import { ThemeToggle } from '@/components/theme-toggle'
 import AudioVisualizer from '@/app/components/AudioVisualizer'
+import { useSpeechControls } from '@/app/hooks/useSpeechControls'
+import SpeechControls from '@/app/components/SpeechControls'
 
 interface Conversation {
   id: string
@@ -86,12 +88,16 @@ export default function ChatPage() {
   // Track when we're waiting for the initial AI response
   const [waitingForResponse, setWaitingForResponse] = useState(false)
   
+  // Speech controls
+  const speechControls = useSpeechControls()
+  
   const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages: setChatMessages, error, append, status } = useChat({
     api: '/api/chat',
     maxSteps: 15, // Match the server-side maxSteps
-    headers: rollingModeAcknowledged ? {
-      'x-rolling-mode-acknowledged': 'true'
-    } : undefined,
+    headers: {
+      ...(speechControls.speechEnabled ? { 'x-enable-speech': 'true' } : {}),
+      ...(rollingModeAcknowledged ? { 'x-rolling-mode-acknowledged': 'true' } : {})
+    },
     body: {
       conversationId: currentConversation?.id
     },
@@ -136,6 +142,94 @@ export default function ChatPage() {
       setWaitingForResponse(false)
     }
   }, [status])
+  
+  // Helper function to extract complete sentences
+  function extractCompleteSentences(text: string): { complete: string[], remainder: string } {
+    const sentencePattern = /([.!?]+)(?:\s+|$)/g;
+    const matches = Array.from(text.matchAll(sentencePattern));
+    
+    if (matches.length === 0) {
+      return { complete: [], remainder: text };
+    }
+    
+    const complete: string[] = [];
+    let lastEnd = 0;
+    
+    for (const match of matches) {
+      const sentenceEnd = match.index! + match[0].length;
+      const sentence = text.slice(lastEnd, sentenceEnd).trim();
+      if (sentence && sentence.length > 5) {
+        complete.push(sentence);
+      }
+      lastEnd = sentenceEnd;
+    }
+    
+    const remainder = text.slice(lastEnd).trim();
+    return { complete, remainder };
+  }
+  
+  // Track text buffer for sentence extraction
+  const textBufferRef = useRef<string>('');
+  const processedSentencesRef = useRef<Set<string>>(new Set());
+  
+  // Generate TTS for a sentence
+  const generateTTS = async (sentence: string) => {
+    if (processedSentencesRef.current.has(sentence)) return;
+    processedSentencesRef.current.add(sentence);
+    
+    try {
+      
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: sentence })
+      });
+      
+      if (response.ok) {
+        const audioBlob = await response.blob();
+        
+        // Convert blob to base64 for the existing playAudio function
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result?.toString().split(',')[1];
+          if (base64) {
+            speechControls.playAudio(base64, sentence);
+          }
+        };
+        reader.readAsDataURL(audioBlob);
+      }
+    } catch (error) {
+    }
+  };
+  
+  // Monitor streaming text and generate TTS
+  useEffect(() => {
+    if (!speechControls.speechEnabled || status !== 'streaming') {
+      // Reset buffer when not streaming
+      if (status === 'ready') {
+        textBufferRef.current = '';
+        processedSentencesRef.current.clear();
+      }
+      return;
+    }
+    
+    // Get the latest assistant message
+    const assistantMessages = messages.filter(m => m.role === 'assistant');
+    const latestAssistant = assistantMessages[assistantMessages.length - 1];
+    
+    if (latestAssistant?.content) {
+      // Update text buffer with new content
+      textBufferRef.current = latestAssistant.content;
+      
+      // Extract complete sentences
+      const { complete } = extractCompleteSentences(textBufferRef.current);
+      
+      // Generate TTS for each complete sentence
+      complete.forEach(sentence => {
+        generateTTS(sentence);
+      });
+    }
+  }, [messages, status, speechControls.speechEnabled])
 
   // Check auth and load conversations
   useEffect(() => {
@@ -1294,6 +1388,16 @@ export default function ChatPage() {
           )}
         </div>
 
+        {/* Speech Controls */}
+        {speechControls.isPlaying && (
+          <div className="px-5 max-w-5xl mx-auto">
+            <SpeechControls 
+              {...speechControls}
+              className="mb-4"
+            />
+          </div>
+        )}
+        
         {/* Input area */}
         <div className="border-t border-gray-200 dark:border-gray-800/30 p-5 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
           <form onSubmit={handleFormSubmit} className="max-w-5xl mx-auto">
@@ -1340,6 +1444,28 @@ export default function ChatPage() {
                 />
               )}
 
+              {/* Speech toggle */}
+              <button
+                type="button"
+                onClick={() => speechControls.setSpeechEnabled(!speechControls.speechEnabled)}
+                className={`p-2 rounded-lg transition-colors duration-150 ${
+                  speechControls.speechEnabled 
+                    ? 'bg-[#22C55E]/10 dark:bg-[#22C55E]/20 text-[#22C55E]' 
+                    : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                }`}
+                title={speechControls.speechEnabled ? 'Disable speech' : 'Enable speech'}
+              >
+                {speechControls.speechEnabled ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+              
               {/* Send button */}
               <button
                 type="submit"

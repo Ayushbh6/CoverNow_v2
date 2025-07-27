@@ -18,6 +18,7 @@ import { collectLifeInsuranceInfoTool } from './tools/collectLifeInsuranceInfo';
 import { showLifeInsuranceRecommendationsTool } from './tools/showLifeInsuranceRecommendations';
 import { calculatorTool } from './tools/calculator';
 
+
 function getErrorMessage(error: unknown): string {
   if (error == null) {
     return 'Unknown error';
@@ -35,6 +36,9 @@ function getErrorMessage(error: unknown): string {
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if speech is enabled
+    const enableSpeech = req.headers.get('x-enable-speech') === 'true';
+    
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -890,7 +894,9 @@ Track internally (not visible to users):
       ? messages 
       : [systemPrompt, ...messages];
 
-    // Remove the forced tool choice - let the system prompt guide the behavior
+    // Log whether speech is enabled (for debugging)
+
+    // Create the stream
     const result = streamText({
       model: openrouter.chat('openai/gpt-4.1'),
       messages: messagesWithSystem,
@@ -907,8 +913,8 @@ Track internally (not visible to users):
         showLifeInsuranceRecommendations: showLifeInsuranceRecommendationsTool,
         calculator: calculatorTool
       },
-      toolChoice: 'auto', // Let the LLM decide based on system prompt
-      maxSteps: 15, // Allow multiple sequential tool calls
+      toolChoice: 'auto',
+      maxSteps: 15,
       async onFinish({ text, usage, steps }) {
         try {
           // When using maxSteps, the text might be empty if only tool calls were made
@@ -969,7 +975,7 @@ Track internally (not visible to users):
         }
       }
     });
-
+    
     return result.toDataStreamResponse({ getErrorMessage });
 
   } catch (error) {
