@@ -999,3 +999,6 @@ Track internally (not visible to users):
     );
   }
 }
+
+// Extend timeout to 5 minutes for deep research operations
+export const maxDuration = 300;

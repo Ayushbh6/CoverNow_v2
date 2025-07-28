@@ -132,12 +132,12 @@ export interface ResearchSession {
   lastUpdated: number;
 }
 
-// Initialize OpenRouter for Gemini model
+// Initialize OpenRouter for GPT-4o-mini model
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!
 });
 
-const model = openrouter.chat('google/gemini-2.5-flash');
+const model = openrouter.chat('openai/gpt-4.1-mini');
 
 // Helper function to perform Tavily search
 async function performSearch(
@@ -145,14 +145,19 @@ async function performSearch(
   searchDepth: 'basic' | 'advanced',
   maxResults: number = 5
 ): Promise<SearchResult[]> {
+  const startTime = Date.now();
+  console.log(`[DeepResearch] Starting search: "${query}" (depth: ${searchDepth}, max: ${maxResults})`);
+  
   try {
     const apiKey = process.env.TAVILY_API_KEY;
     if (!apiKey) {
+      console.error('[DeepResearch] ERROR: Tavily API key not configured');
       throw new Error('Tavily API key not configured');
     }
 
     const tvly = tavily({ apiKey });
     
+    console.log(`[DeepResearch] Calling Tavily API...`);
     const response = await tvly.search(query, {
       search_depth: searchDepth,
       max_results: maxResults,
@@ -162,6 +167,9 @@ async function performSearch(
       include_images: false
     });
     
+    const duration = Date.now() - startTime;
+    console.log(`[DeepResearch] Search completed in ${duration}ms, got ${response.results?.length || 0} results`);
+    
     return response.results.map((result: any) => ({
       title: result.title,
       url: result.url,
@@ -170,6 +178,9 @@ async function performSearch(
       publishedDate: result.published_date
     }));
   } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[DeepResearch] ERROR in performSearch after ${duration}ms:`, error);
+    console.error(`[DeepResearch] Error stack:`, error instanceof Error ? error.stack : 'No stack trace available');
     throw error;
   }
 }
@@ -317,7 +328,8 @@ setInterval(() => {
 }, 5 * 60 * 1000); // Run every 5 minutes
 
 // Helper to get current progress for a session
-function getSessionProgress(session: ResearchSession): DeepResearchProgress {
+// Currently unused but keeping for future monitoring features
+/* function getSessionProgress(session: ResearchSession): DeepResearchProgress {
   const duration = Math.round((Date.now() - session.accumulator.startTime) / 1000);
   const phaseMap: Record<string, DeepResearchProgress['phase']> = {
     'reconnaissance': 'reconnaissance',
@@ -341,7 +353,7 @@ function getSessionProgress(session: ResearchSession): DeepResearchProgress {
     totalSearches: completedSearches,
     duration
   };
-}
+} */
 
 // Phase 1: Initialize and Reconnaissance
 async function initializeAndReconnaissance(
@@ -350,6 +362,10 @@ async function initializeAndReconnaissance(
 ): Promise<{ sessionId: string; progress: DeepResearchProgress; reconContext: string }> {
   const sessionId = randomUUID();
   const startTime = Date.now();
+  console.log(`\n[DeepResearch] === PHASE 1: INIT & RECONNAISSANCE ===`);
+  console.log(`[DeepResearch] Session ID: ${sessionId}`);
+  console.log(`[DeepResearch] Query: "${query}"`);
+  console.log(`[DeepResearch] Breadth: ${breadth}`);
   
   const accumulator: ResearchAccumulator = {
     originalQuery: query,
@@ -374,10 +390,12 @@ async function initializeAndReconnaissance(
   researchSessions.set(sessionId, session);
 
   try {
+    console.log(`[DeepResearch] Starting reconnaissance search...`);
     const reconResults = await performSearch(query, 'basic', 5);
     
     accumulator.reconnaissance = reconResults;
     accumulator.totalSearches += 1;
+    console.log(`[DeepResearch] Reconnaissance complete: ${reconResults.length} results`);
 
     // Mark reconnaissance URLs as visited
     reconResults.forEach(r => accumulator.visitedUrls.add(r.url));
@@ -388,11 +406,13 @@ async function initializeAndReconnaissance(
       .join('\n\n');
 
     // Generate Level 1 queries based on reconnaissance
+    console.log(`[DeepResearch] Generating Level 1 queries...`);
     const level1Queries = await generateSearchQueries(
       query,
       reconContext,
       breadth
     );
+    console.log(`[DeepResearch] Generated ${level1Queries.length} queries:`, level1Queries);
 
     session.level1Queries = level1Queries;
     session.currentPhase = 'level1';
@@ -417,8 +437,12 @@ async function initializeAndReconnaissance(
 
 // Phase 2: Level 1 Research
 async function performLevel1Research(sessionId: string): Promise<DeepResearchProgress> {
+  console.log(`\n[DeepResearch] === PHASE 2: LEVEL 1 RESEARCH ===`);
+  console.log(`[DeepResearch] Session ID: ${sessionId}`);
+  
   const session = researchSessions.get(sessionId);
   if (!session) {
+    console.error(`[DeepResearch] ERROR: Session ${sessionId} not found`);
     throw new Error('Research session not found. Please start with deepResearchInit.');
   }
 
@@ -434,8 +458,10 @@ async function performLevel1Research(sessionId: string): Promise<DeepResearchPro
 
   try {
     // Execute Level 1 searches
+    console.log(`[DeepResearch] Starting ${session.level1Queries.length} Level 1 searches...`);
     for (let i = 0; i < session.level1Queries.length; i++) {
       const query = session.level1Queries[i];
+      console.log(`[DeepResearch] Level 1 Search ${i + 1}/${session.level1Queries.length}: "${query}"`);
       
       const node: ResearchNode = {
         query,
@@ -448,9 +474,12 @@ async function performLevel1Research(sessionId: string): Promise<DeepResearchPro
 
       const searchResults = await performSearch(query, 'advanced', 5);
       accumulator.totalSearches += 1;
+      console.log(`[DeepResearch] Got ${searchResults.length} results for query ${i + 1}`);
 
       // Filter for relevance
       node.status = 'analyzing';
+      console.log(`[DeepResearch] Analyzing relevance of ${searchResults.length} results...`);
+      let relevantCount = 0;
       for (const result of searchResults) {
         const isRelevant = await evaluateRelevance(
           result,
@@ -459,22 +488,26 @@ async function performLevel1Research(sessionId: string): Promise<DeepResearchPro
         );
 
         if (isRelevant) {
+          relevantCount++;
           node.results.push(result);
           accumulator.visitedUrls.add(result.url);
 
           // Extract learnings
+          console.log(`[DeepResearch] Extracting learnings from: ${result.title}`);
           const learning = await extractLearnings(result, query, accumulator.originalQuery);
           node.learnings.push(learning);
           
           // Add high-confidence insights
           if (learning.confidence > 0.7) {
             accumulator.keyInsights.push(learning.insight);
+            console.log(`[DeepResearch] Added high-confidence insight (${learning.confidence}): ${learning.insight.substring(0, 50)}...`);
           }
         }
       }
 
       node.status = 'completed';
       accumulator.researchNodes.push(node);
+      console.log(`[DeepResearch] Query ${i + 1} complete: ${relevantCount}/${searchResults.length} relevant results`);
     }
 
     // Collect all follow-up questions from Level 1
@@ -499,14 +532,21 @@ async function performLevel1Research(sessionId: string): Promise<DeepResearchPro
 
     return progress;
   } catch (error) {
+    const duration = Math.round((Date.now() - accumulator.startTime) / 1000);
+    console.error(`[DeepResearch] ERROR in Level 1 after ${duration}s:`, error);
+    console.error(`[DeepResearch] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available');
     throw error;
   }
 }
 
 // Phase 3: Level 2 Research
 async function performLevel2Research(sessionId: string): Promise<DeepResearchProgress> {
+  console.log(`\n[DeepResearch] === PHASE 3: LEVEL 2 RESEARCH ===`);
+  console.log(`[DeepResearch] Session ID: ${sessionId}`);
+  
   const session = researchSessions.get(sessionId);
   if (!session) {
+    console.error(`[DeepResearch] ERROR: Session ${sessionId} not found`);
     throw new Error('Research session not found. Please start with deepResearchInit.');
   }
 
@@ -522,8 +562,10 @@ async function performLevel2Research(sessionId: string): Promise<DeepResearchPro
 
   try {
     // Execute Level 2 searches
+    console.log(`[DeepResearch] Starting ${session.level2Queries.length} Level 2 searches...`);
     for (let i = 0; i < session.level2Queries.length; i++) {
       const query = session.level2Queries[i];
+      console.log(`[DeepResearch] Level 2 Search ${i + 1}/${session.level2Queries.length}: "${query}"`);
       
       const node: ResearchNode = {
         query,
@@ -536,8 +578,11 @@ async function performLevel2Research(sessionId: string): Promise<DeepResearchPro
 
       const searchResults = await performSearch(query, 'advanced', 3);
       accumulator.totalSearches += 1;
+      console.log(`[DeepResearch] Got ${searchResults.length} results for query ${i + 1}`);
 
       node.status = 'analyzing';
+      console.log(`[DeepResearch] Analyzing relevance of ${searchResults.length} results...`);
+      let relevantCount = 0;
       for (const result of searchResults) {
         const isRelevant = await evaluateRelevance(
           result,
@@ -546,20 +591,24 @@ async function performLevel2Research(sessionId: string): Promise<DeepResearchPro
         );
 
         if (isRelevant) {
+          relevantCount++;
           node.results.push(result);
           accumulator.visitedUrls.add(result.url);
 
+          console.log(`[DeepResearch] Extracting learnings from: ${result.title}`);
           const learning = await extractLearnings(result, query, accumulator.originalQuery);
           node.learnings.push(learning);
           
           if (learning.confidence > 0.7) {
             accumulator.keyInsights.push(learning.insight);
+            console.log(`[DeepResearch] Added high-confidence insight (${learning.confidence}): ${learning.insight.substring(0, 50)}...`);
           }
         }
       }
 
       node.status = 'completed';
       accumulator.researchNodes.push(node);
+      console.log(`[DeepResearch] Query ${i + 1} complete: ${relevantCount}/${searchResults.length} relevant results`);
     }
 
     session.currentPhase = 'synthesis';
@@ -577,14 +626,21 @@ async function performLevel2Research(sessionId: string): Promise<DeepResearchPro
 
     return progress;
   } catch (error) {
+    const duration = Math.round((Date.now() - accumulator.startTime) / 1000);
+    console.error(`[DeepResearch] ERROR in Level 2 after ${duration}s:`, error);
+    console.error(`[DeepResearch] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available');
     throw error;
   }
 }
 
 // Phase 4: Synthesis and Report Generation
 async function synthesizeResearch(sessionId: string): Promise<DeepResearchResponse> {
+  console.log(`\n[DeepResearch] === PHASE 4: SYNTHESIS ===`);
+  console.log(`[DeepResearch] Session ID: ${sessionId}`);
+  
   const session = researchSessions.get(sessionId);
   if (!session) {
+    console.error(`[DeepResearch] ERROR: Session ${sessionId} not found`);
     throw new Error('Research session not found. Please start with deepResearchInit.');
   }
 
@@ -596,6 +652,7 @@ async function synthesizeResearch(sessionId: string): Promise<DeepResearchRespon
 
   try {
     // Generate recommendations based on all findings
+    console.log(`[DeepResearch] Generating recommendations from ${accumulator.keyInsights.length} insights...`);
     const { object: recommendations } = await generateObject({
       model,
       prompt: `Based on these research insights about "${accumulator.originalQuery}", provide 3-5 actionable recommendations:
@@ -609,7 +666,9 @@ async function synthesizeResearch(sessionId: string): Promise<DeepResearchRespon
     accumulator.recommendations = recommendations.recommendations;
 
     // Generate final report
+    console.log(`[DeepResearch] Generating final report...`);
     const report = await generateReport(accumulator);
+    console.log(`[DeepResearch] Report generated: ${report.length} characters`);
 
     // Prepare response
     const duration = Math.round((Date.now() - accumulator.startTime) / 1000);
